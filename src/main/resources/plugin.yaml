@@ -1,0 +1,22 @@
+# Refer https://docs.halo.run/developer-guide/plugin/basics/manifest
+
+apiVersion: plugin.halo.run/v1alpha1
+kind: Plugin
+metadata:
+  # The name defines how the plugin is invoked, A unique name
+  name: psyche-echo
+spec:
+  enabled: true
+  requires: ">=2.23.0"
+  author:
+    name: miany
+    website: https://github.com/miany
+  logo: logo.png
+  homepage: https://github.com/miany/psyche-echo#readme
+  repo: https://github.com/miany/psyche-echo
+  issues: https://github.com/miany/psyche-echo/issues
+  displayName: "psyche-echo"
+  description: "psyche-echo - Halo 插件"
+  license:
+    - name: "GPL-3.0"
+      url: "https://github.com/miany/psyche-echo/blob/main/LICENSE"
