@@ -5,6 +5,10 @@ plugins {
 
 group 'com.miany.psycheecho.ui'
 
+tasks.named('pnpmInstall') {
+    doNotTrackState('pnpmInstall tracks node_modules which is managed by pnpm')
+}
+
 tasks.register('pnpmBuild', PnpmTask) {
     group = 'build'
     description = 'Build the UI project using pnpm'

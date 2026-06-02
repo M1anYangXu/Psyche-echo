@@ -1,0 +1,369 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Psyche Echo API",
+    "version": "v1alpha1",
+    "description": "API for Psyche Echo Plugin"
+  },
+  "servers": [
+    {
+      "url": "/apis/api.echo.miany.run/v1alpha1"
+    }
+  ],
+  "paths": {
+    "/categories": {
+      "get": {
+        "summary": "List all categories",
+        "operationId": "ListCategories",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a category",
+        "operationId": "CreateCategory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/categories/{name}": {
+      "get": {
+        "summary": "Get a category by name",
+        "operationId": "GetCategory",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a category",
+        "operationId": "UpdateCategory",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a category",
+        "operationId": "DeleteCategory",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/notes": {
+      "get": {
+        "summary": "List all notes",
+        "operationId": "ListNotes",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a note",
+        "operationId": "CreateNote",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Note"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/notes/{name}": {
+      "get": {
+        "summary": "Get a note by name",
+        "operationId": "GetNote",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a note",
+        "operationId": "UpdateNote",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Note"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a note",
+        "operationId": "DeleteNote",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Category": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "spec": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "icon": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "CategoryList": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "Media": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "cover": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
+      "Note": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "spec": {
+            "type": "object",
+            "properties": {
+              "author": {
+                "type": "string"
+              },
+              "avatar": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "categoryName": {
+                "type": "string"
+              },
+              "medias": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Media"
+                }
+              }
+            }
+          },
+          "status": {
+            "type": "object",
+            "properties": {
+              "time": {
+                "type": "string"
+              },
+              "visitCount": {
+                "type": "integer"
+              },
+              "categoryId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "NoteList": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            }
+          }
+        }
+      }
+    }
+  }
+}

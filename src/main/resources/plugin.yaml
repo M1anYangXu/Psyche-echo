@@ -10,13 +10,17 @@ spec:
   requires: ">=2.23.0"
   author:
     name: miany
-    website: https://github.com/miany
+    website: https://gitee.com/miany
   logo: logo.png
-  homepage: https://github.com/miany/psyche-echo#readme
-  repo: https://github.com/miany/psyche-echo
-  issues: https://github.com/miany/psyche-echo/issues
-  displayName: "psyche-echo"
-  description: "psyche-echo - Halo 插件"
+  homepage: https://gitee.com/miany/psyche-echo#readme
+  repo: https://gitee.com/miany/psyche-echo
+  issues: https://gitee.com/miany/psyche-echo/issues
+  displayName: "记录(个人)"
+  description: "记录(个人) - Halo 插件"
   license:
     - name: "GPL-3.0"
-      url: "https://github.com/miany/psyche-echo/blob/main/LICENSE"
+      url: "https://gitee.com/miany/psyche-echo/blob/main/LICENSE"
+  extensionPoints:
+    console:
+      uiPlugins:
+        - entry: main.js

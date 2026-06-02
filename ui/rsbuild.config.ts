@@ -13,7 +13,10 @@ export default rsbuildConfig({
     plugins: [pluginSass()],
     tools: {
       rspack: {
-        plugins: [Icons({ compiler: "vue3" })],
+        plugins: [Icons({
+          compiler: "vue3",
+          autoInstall: true,
+        })],
       },
     },
   },

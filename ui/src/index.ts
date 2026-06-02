@@ -1,6 +1,7 @@
 import { definePlugin } from '@halo-dev/ui-shared'
 import { IconPlug } from '@halo-dev/components'
 import { markRaw } from 'vue'
+import 'remixicon/fonts/remixicon.css'
 
 export default definePlugin({
   components: {},
@@ -8,15 +9,15 @@ export default definePlugin({
     {
       parentName: 'Root',
       route: {
-        path: '/example',
-        name: 'Example',
+        path: '/psyche-echo',
+        name: 'PsycheEcho',
         component: () => import(/* webpackChunkName: "HomeView" */ './views/HomeView.vue'),
         meta: {
-          title: '示例页面',
+          title: '心灵回响',
           searchable: true,
           menu: {
-            name: '示例页面',
-            group: '示例分组',
+            name: '心灵回响',
+            group: '心灵回响分组',
             icon: markRaw(IconPlug),
             priority: 0,
           },
