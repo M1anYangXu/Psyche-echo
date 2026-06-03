@@ -10,16 +10,16 @@ spec:
   requires: ">=2.23.0"
   author:
     name: miany
-    website: https://gitee.com/miany
+    website: https://gitee.com/Little-Mianyang
   logo: logo.png
-  homepage: https://gitee.com/miany/psyche-echo#readme
-  repo: https://gitee.com/miany/psyche-echo
-  issues: https://gitee.com/miany/psyche-echo/issues
+  homepage: https://gitee.com/Little-Mianyang/psyche-echo#readme
+  repo: https://gitee.com/Little-Mianyang/psyche-echo
+  issues: https://gitee.com/Little-Mianyang/psyche-echo/issues
   displayName: "记录(个人)"
   description: "记录(个人) - Halo 插件"
   license:
     - name: "GPL-3.0"
-      url: "https://gitee.com/miany/psyche-echo/blob/main/LICENSE"
+      url: "https://gitee.com/Little-Mianyang/psyche-echo/blob/main/LICENSE"
   extensionPoints:
     console:
       uiPlugins:

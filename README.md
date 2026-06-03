@@ -41,7 +41,7 @@
 2. **手动安装**
    ```bash
    # 下载最新版本的插件 JAR 文件
-   wget https://github.com/miany/psyche-echo/releases/latest/download/psyche-echo.jar
+   wget https://github.com/Little-Mianyang/psyche-echo/releases/latest/download/psyche-echo.jar
    
    # 将 JAR 文件复制到 Halo 插件目录
    cp psyche-echo.jar /path/to/halo/plugins/
@@ -142,11 +142,11 @@ psyche-echo/
 
 ## 许可证
 
-[GPL-3.0](https://github.com/miany/psyche-echo/blob/main/LICENSE) © miany
+[GPL-3.0](https://github.com/Little-Mianyang/psyche-echo/blob/main/LICENSE) © Little-Mianyang
 
 ## 作者
 
-- **miany** - [https://gitee.com/miany](https://gitee.com/miany)
+- **miany** - [https://gitee.com/Little-Mianyang](https://gitee.com/Little-Mianyang)
 
 ---
 
