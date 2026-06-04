@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, watch, onMounted, ref } from 'vue'
+import { shallowRef, watch, onMounted, ref, computed } from 'vue'
 import {
   ExtensionsKit,
   RichTextEditor,
@@ -12,6 +12,8 @@ import EmojiSelectorModal from './EmojiSelectorModal.vue'
 const props = defineProps<{
   modelValue: string
   medias?: Array<{ url: string; type: string; cover?: string; displayName?: string }>
+  weather?: string
+  mood?: string
 }>()
 
 const emit = defineEmits<{
@@ -19,11 +21,57 @@ const emit = defineEmits<{
   (e: 'open-attachment'): void
   (e: 'remove-media', index: number): void
   (e: 'update:medias', medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>): void
+  (e: 'update:weather', value: string): void
+  (e: 'update:mood', value: string): void
 }>()
 
 const editor = shallowRef<VueEditor>()
 const localMedias = ref<Array<{ url: string; type: string; cover?: string; displayName?: string }>>([])
 const emojiSelectorModal = ref(false)
+const showWeatherDropdown = ref(false)
+const showMoodDropdown = ref(false)
+
+const weatherOptions = [
+  { value: 'sunny', label: '☀️ 晴天' },
+  { value: 'cloudy', label: '☁️ 多云' },
+  { value: 'lightRain', label: '🌧️ 小雨' },
+  { value: 'heavyRain', label: '⛈️ 大雨' },
+  { value: 'lightSnow', label: '❄️ 小雪' },
+  { value: 'heavySnow', label: '🌨️ 大雪' },
+  { value: 'windy', label: '🌬️ 大风' },
+  { value: 'foggy', label: '🌫️ 雾天' },
+]
+
+const moodOptions = [
+  { value: 'happy', label: '😊 开心' },
+  { value: 'sad', label: '😢 难过' },
+  { value: 'angry', label: '😠 生气' },
+  { value: 'tired', label: '😴 疲惫' },
+  { value: 'excited', label: '🎉 兴奋' },
+  { value: 'anxious', label: '😰 焦虑' },
+  { value: 'peaceful', label: '😌 平静' },
+  { value: 'confused', label: '😕 困惑' },
+]
+
+const selectedWeatherLabel = computed(() => {
+  const option = weatherOptions.find(w => w.value === props.weather)
+  return option ? option.label : '🌤️ 天气'
+})
+
+const selectedMoodLabel = computed(() => {
+  const option = moodOptions.find(m => m.value === props.mood)
+  return option ? option.label : '💭 心情'
+})
+
+const selectWeather = (value: string) => {
+  emit('update:weather', value === props.weather ? '' : value)
+  showWeatherDropdown.value = false
+}
+
+const selectMood = (value: string) => {
+  emit('update:mood', value === props.mood ? '' : value)
+  showMoodDropdown.value = false
+}
 
 const onEmojiSelect = (emoji: string) => {
   editor.value?.commands?.insertContent(emoji)
@@ -73,11 +121,16 @@ watch(
   },
   { immediate: true, deep: true }
 )
+
+const closeDropdowns = () => {
+  showWeatherDropdown.value = false
+  showMoodDropdown.value = false
+}
 </script>
 
 <template>
-  <div class="halo-moment-editor-wrapper">
-    <div class="halo-moment-editor relative">
+  <div class="halo-echo-editor-wrapper" @click="closeDropdowns">
+    <div class="halo-echo-editor relative">
       <RichTextEditor v-if="editor" :editor="editor" locale="zh-CN" />
     </div>
 
@@ -101,6 +154,43 @@ watch(
         <div class="group" @click="emojiSelectorModal = true">
           <span class="emoji-icon">😊</span>
         </div>
+        <div class="divider"></div>
+        <div
+          class="selector-group"
+          @click.stop="showWeatherDropdown = !showWeatherDropdown; showMoodDropdown = false"
+        >
+          <span>{{ selectedWeatherLabel }}</span>
+          <span class="dropdown-arrow">▼</span>
+          <div v-if="showWeatherDropdown" class="dropdown-menu">
+            <button
+              v-for="weather in weatherOptions"
+              :key="weather.value"
+              class="dropdown-item"
+              :class="{ active: weather.value === props.weather }"
+              @click.stop="selectWeather(weather.value)"
+            >
+              {{ weather.label }}
+            </button>
+          </div>
+        </div>
+        <div
+          class="selector-group"
+          @click.stop="showMoodDropdown = !showMoodDropdown; showWeatherDropdown = false"
+        >
+          <span>{{ selectedMoodLabel }}</span>
+          <span class="dropdown-arrow">▼</span>
+          <div v-if="showMoodDropdown" class="dropdown-menu">
+            <button
+              v-for="mood in moodOptions"
+              :key="mood.value"
+              class="dropdown-item"
+              :class="{ active: mood.value === props.mood }"
+              @click.stop="selectMood(mood.value)"
+            >
+              {{ mood.label }}
+            </button>
+          </div>
+        </div>
       </div>
       <div class="footer-right">
         <slot name="footer-right"></slot>
@@ -115,14 +205,13 @@ watch(
 </template>
 
 <style scoped>
-.halo-moment-editor-wrapper {
+.halo-echo-editor-wrapper {
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  overflow: hidden;
   background-color: #fff;
 }
 
-.halo-moment-editor {
+.halo-echo-editor {
   box-sizing: border-box;
 
   :deep(.editor-header) {
@@ -267,5 +356,80 @@ watch(
 
 .emoji-icon {
   font-size: 1.25rem;
+}
+
+.divider {
+  width: 1px;
+  height: 1.5rem;
+  background-color: #e5e7eb;
+  margin: 0 0.25rem;
+}
+
+.selector-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #f3f4f6;
+
+  &:hover {
+    background-color: #e5e7eb;
+  }
+
+  span {
+    font-size: 14px;
+    color: #374151;
+  }
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: #9ca3af;
+  transition: transform 0.2s;
+}
+
+.selector-group:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 140px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+
+  &.active {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+  }
 }
 </style>

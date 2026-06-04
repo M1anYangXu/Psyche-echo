@@ -57,7 +57,7 @@ onUnmounted(() => {
     <div class="sidebar-header">
       <h2 class="sidebar-title">
         <Icon icon="ri:book-read-fill" :size="20" />
-        语音分类
+        记录
       </h2>
     </div>
 

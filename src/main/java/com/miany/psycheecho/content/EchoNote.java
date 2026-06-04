@@ -30,6 +30,8 @@ public class EchoNote extends AbstractExtension {
         private String content;
         private List<Media> medias;
         private String categoryName;
+        private String weather;
+        private String mood;
     }
     
     @Data

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import EchoItem from './EchoItem.vue'
 import type { EchoItem as EchoItemType } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   echoes: EchoItemType[]
   isLoading: boolean
 }>()
@@ -16,13 +17,23 @@ const emit = defineEmits<{
   (e: 'open-attachment'): void
   (e: 'update-medias', echo: EchoItemType, medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>): void
 }>()
+
+const MAX_DISPLAY = 10
+
+const displayedEchoes = computed(() => {
+  return props.echoes.slice(0, MAX_DISPLAY)
+})
+
+const hasMore = computed(() => {
+  return props.echoes.length > MAX_DISPLAY
+})
 </script>
 
 <template>
   <div class="echo-list-container">
     <div v-if="!isLoading" class="echo-list">
       <EchoItem
-        v-for="echo in echoes"
+        v-for="echo in displayedEchoes"
         :key="echo.metadata.name"
         :echo="echo"
         @edit="emit('edit', $event)"
@@ -33,6 +44,9 @@ const emit = defineEmits<{
         @open-attachment="emit('open-attachment')"
         @update-medias="emit('update-medias', echo, $event)"
       />
+      <div v-if="hasMore" class="more-hint">
+        <p>仅显示前{{ MAX_DISPLAY }}条，共{{ echoes.length }}条</p>
+      </div>
       <div v-if="echoes.length === 0" class="empty-state">
         <p>暂无echo，快去写一篇吧！</p>
       </div>
@@ -50,6 +64,15 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.more-hint {
+  text-align: center;
+  padding: 20px 0;
+  color: #94a3b8;
+  font-size: 14px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 16px;
 }
 
 .empty-state {

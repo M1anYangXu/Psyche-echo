@@ -127,6 +127,8 @@ const deleteCategory = (name: string) => {
 // Echo Publishing
 const newEcho = reactive({
   content: '',
+  weather: '',
+  mood: '',
 })
 const selectedMedias = ref<Array<{ url: string; type: string; cover?: string; displayName?: string }>>([])
 const currentlyEditingEcho = ref<EchoItem | null>(null)
@@ -190,6 +192,8 @@ const publishEcho = async () => {
           url: m.url,
           type: m.type,
         })),
+        weather: newEcho.weather,
+        mood: newEcho.mood,
       },
       status: {
         categoryId: selectedCategory.value,
@@ -198,6 +202,8 @@ const publishEcho = async () => {
       },
     })
     newEcho.content = ''
+    newEcho.weather = ''
+    newEcho.mood = ''
     selectedMedias.value = []
     Toast.success('发布成功')
   } catch {
@@ -273,7 +279,11 @@ onMounted(() => {
           <EchoEditor
             v-model="newEcho.content"
             :medias="selectedMedias"
+            :weather="newEcho.weather"
+            :mood="newEcho.mood"
             @update:medias="handleUpdateMedias"
+            @update:weather="newEcho.weather = $event"
+            @update:mood="newEcho.mood = $event"
             @open-attachment="handleOpenAttachment"
           >
             <template #footer-right>

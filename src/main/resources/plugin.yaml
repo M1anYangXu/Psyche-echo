@@ -15,8 +15,8 @@ spec:
   homepage: https://gitee.com/Little-Mianyang/psyche-echo#readme
   repo: https://gitee.com/Little-Mianyang/psyche-echo
   issues: https://gitee.com/Little-Mianyang/psyche-echo/issues
-  displayName: "记录(个人)"
-  description: "记录(个人) - Halo 插件"
+  displayName: "心灵回响"
+  description: "个人日记记录插件，记录心情、想法和生活点滴"
   license:
     - name: "GPL-3.0"
       url: "https://gitee.com/Little-Mianyang/psyche-echo/blob/main/LICENSE"

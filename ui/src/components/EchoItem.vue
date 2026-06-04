@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import EchoEditor from './EchoEditor.vue'
 import type { EchoItem } from '@/types'
@@ -20,7 +20,39 @@ const emit = defineEmits<{
 
 const editContent = ref(props.echo.spec.content)
 const editMedias = ref([...(props.echo.spec.medias || [])])
+const editWeather = ref(props.echo.spec.weather || '')
+const editMood = ref(props.echo.spec.mood || '')
 const showDropdown = ref(false)
+
+const weatherIcons: Record<string, string> = {
+  sunny: '☀️',
+  cloudy: '☁️',
+  lightRain: '🌧️',
+  heavyRain: '⛈️',
+  lightSnow: '❄️',
+  heavySnow: '🌨️',
+  windy: '🌬️',
+  foggy: '🌫️',
+}
+
+const moodIcons: Record<string, string> = {
+  happy: '😊',
+  sad: '😢',
+  angry: '😠',
+  tired: '😴',
+  excited: '🎉',
+  anxious: '😰',
+  peaceful: '😌',
+  confused: '😕',
+}
+
+const displayWeather = computed(() => {
+  return props.echo.spec.weather ? weatherIcons[props.echo.spec.weather] : ''
+})
+
+const displayMood = computed(() => {
+  return props.echo.spec.mood ? moodIcons[props.echo.spec.mood] : ''
+})
 
 watch(() => props.echo.spec.content, (newVal) => {
   editContent.value = newVal
@@ -29,6 +61,14 @@ watch(() => props.echo.spec.content, (newVal) => {
 watch(() => props.echo.spec.medias, (newMedias) => {
   editMedias.value = [...(newMedias || [])]
 }, { immediate: true, deep: true })
+
+watch(() => props.echo.spec.weather, (newWeather) => {
+  editWeather.value = newWeather || ''
+})
+
+watch(() => props.echo.spec.mood, (newMood) => {
+  editMood.value = newMood || ''
+})
 
 const startEdit = () => {
   showDropdown.value = false
@@ -43,13 +83,23 @@ const handleUpdateMedias = (newMedias: Array<{ url: string; type: string; cover?
   emit('update-medias', [...newMedias])
 }
 
+const handleUpdateWeather = (weather: string) => {
+  editWeather.value = weather
+}
+
+const handleUpdateMood = (mood: string) => {
+  editMood.value = mood
+}
+
 const saveEdit = () => {
   const updatedEcho = {
     ...props.echo,
     spec: {
       ...props.echo.spec,
       content: editContent.value,
-      medias: [...editMedias.value]
+      medias: [...editMedias.value],
+      weather: editWeather.value,
+      mood: editMood.value,
     }
   }
   emit('save', updatedEcho)
@@ -84,7 +134,11 @@ const formatDate = () => {
         <EchoEditor
           v-model="editContent"
           :medias="editMedias"
+          :weather="editWeather"
+          :mood="editMood"
           @update:medias="handleUpdateMedias"
+          @update:weather="handleUpdateWeather"
+          @update:mood="handleUpdateMood"
           @open-attachment="$emit('open-attachment')"
         >
           <template #footer-right>
@@ -118,6 +172,10 @@ const formatDate = () => {
               </button>
             </div>
           </div>
+        </div>
+        <div v-if="displayWeather || displayMood" class="echo-meta">
+          <span v-if="displayWeather" class="meta-item">{{ displayWeather }}</span>
+          <span v-if="displayMood" class="meta-item">{{ displayMood }}</span>
         </div>
         <div class="echo-text" v-html="echo.spec.content"></div>
         <div v-if="echo.spec.medias?.length" class="echo-medias">
@@ -266,6 +324,19 @@ const formatDate = () => {
       background-color: #fef2f2;
     }
   }
+}
+
+.echo-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.meta-item {
+  font-size: 14px;
+  padding: 2px 8px;
+  background-color: #f1f5f9;
+  border-radius: 12px;
 }
 
 .echo-text {

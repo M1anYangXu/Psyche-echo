@@ -28,6 +28,8 @@ export interface EchoItem {
       cover?: string
       displayName?: string
     }>
+    weather?: string
+    mood?: string
   }
   status: {
     categoryId: string
