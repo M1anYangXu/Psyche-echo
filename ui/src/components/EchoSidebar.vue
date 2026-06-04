@@ -112,23 +112,25 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .echo-sidebar {
   width: 280px;
-  background-color: #fff;
-  border-radius: 12px;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
   flex-shrink: 0;
   max-height: calc(100vh - 48px);
-  overflow-y: auto;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .sidebar-header {
-  padding: 16px;
-  background-color: #fff;
-  border-radius: 4px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .sidebar-title {
@@ -137,7 +139,11 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: #fff;
+
+  svg {
+    color: rgba(255, 255, 255, 0.9);
+  }
 }
 
 .category-list {
@@ -152,19 +158,20 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s;
 
   &:hover {
-    background-color: #f8fafc;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    background-color: #fafafa;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.08);
+    transform: translateX(2px);
   }
 
   &.active {
-    background-color: #f1f5f9;
-    border: 1px solid #dbeafe;
-    border-left: 3px solid #3b82f6;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-left: 3px solid #667eea;
   }
 }
 
@@ -199,12 +206,12 @@ onUnmounted(() => {
 
 .category-item-wrapper.active .category-item {
   .category-icon {
-    color: #3b82f6;
+    color: #667eea;
   }
 
   .category-count {
-    background-color: #e0f2fe;
-    color: #0284c7;
+    background-color: rgba(102, 126, 234, 0.15);
+    color: #667eea;
   }
 }
 
@@ -302,20 +309,23 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  padding: 10px 20px;
-  border-radius: 8px;
-  background-color: #3b82f6;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
   color: #fff;
   border: none;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 
   &:hover {
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+    transform: translateY(-1px);
   }
 }
 </style>

@@ -111,209 +111,240 @@ const toggleDropdown = (e: Event) => {
   showDropdown.value = !showDropdown.value
 }
 
-const formatDate = () => {
-  if (props.echo.status?.time) {
-    return props.echo.status.time
-  }
+const getWeekDay = () => {
   if (props.echo.metadata?.creationTimestamp) {
-    return new Date(props.echo.metadata.creationTimestamp).toLocaleString()
+    const date = new Date(props.echo.metadata.creationTimestamp)
+    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    return weekDays[date.getDay()]
   }
   return ''
+}
+
+const getDateInfo = () => {
+  if (props.echo.metadata?.creationTimestamp) {
+    const date = new Date(props.echo.metadata.creationTimestamp)
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    return {
+      month,
+      day,
+      time: `${hours}:${minutes}`
+    }
+  }
+  return { month: '', day: '', time: '' }
 }
 </script>
 
 <template>
-  <div class="echo-item">
-    <div class="echo-avatar">
-      <div class="avatar-placeholder">
-        <Icon icon="ri:user-line" :size="24" />
+  <div class="echo-card">
+    <div class="card-header">
+      <div class="date-badge">
+        <span class="badge-date">{{ getDateInfo().month }}月{{ getDateInfo().day }}日 {{ getDateInfo().time }}</span>
+        <span class="badge-weekday">{{ getWeekDay() }}</span>
+      </div>
+      <div v-if="displayWeather || displayMood" class="card-meta">
+        <span v-if="displayWeather" class="meta-icon">{{ displayWeather }}</span>
+        <span v-if="displayMood" class="meta-icon">{{ displayMood }}</span>
+      </div>
+      <div class="card-actions">
+        <button
+          class="action-btn"
+          @click.stop="toggleDropdown"
+          :class="{ active: showDropdown }"
+        >
+          <Icon icon="ri:edit-2-line" :size="16" />
+          <span class="btn-text">编辑</span>
+        </button>
+        <div v-if="showDropdown" class="dropdown-menu">
+          <button class="dropdown-item" @click.stop="startEdit">
+            <Icon icon="ri:edit-2-line" :size="14" />
+            编辑
+          </button>
+          <button class="dropdown-item danger" @click.stop="deleteEcho">
+            <Icon icon="ri:delete-bin-line" :size="14" />
+            删除
+          </button>
+        </div>
       </div>
     </div>
-    <div class="echo-body">
-      <div v-if="echo.editing" class="edit-mode">
-        <EchoEditor
-          v-model="editContent"
-          :medias="editMedias"
-          :weather="editWeather"
-          :mood="editMood"
-          @update:medias="handleUpdateMedias"
-          @update:weather="handleUpdateWeather"
-          @update:mood="handleUpdateMood"
-          @open-attachment="$emit('open-attachment')"
-        >
-          <template #footer-right>
-            <div class="edit-actions">
-              <button class="cancel-btn" @click="cancelEdit">取消</button>
-              <button class="save-btn" @click="saveEdit">保存</button>
-            </div>
-          </template>
-        </EchoEditor>
-      </div>
-      <template v-else>
-        <div class="echo-header">
-          <span class="echo-author">{{ echo.spec.author }}</span>
-          <span class="echo-time">{{ formatDate() }}</span>
-          <div class="echo-more-wrapper">
-            <button
-              class="echo-more"
-              @click.stop="toggleDropdown"
-              :class="{ active: showDropdown }"
-            >
-              <Icon icon="ri:more-fill" :size="20" />
-            </button>
-            <div v-if="showDropdown" class="echo-dropdown-menu">
-              <button class="echo-dropdown-item" @click.stop="startEdit">
-                <Icon icon="ri:edit-2-fill" :size="16" />
-                编辑
-              </button>
-              <button class="echo-dropdown-item danger" @click.stop="deleteEcho">
-                <Icon icon="ri:delete-bin-2-fill" :size="16" />
-                删除
-              </button>
+    
+    <div v-if="echo.editing" class="card-body edit-mode">
+      <EchoEditor
+        v-model="editContent"
+        :medias="editMedias"
+        :weather="editWeather"
+        :mood="editMood"
+        @update:medias="handleUpdateMedias"
+        @update:weather="handleUpdateWeather"
+        @update:mood="handleUpdateMood"
+        @open-attachment="$emit('open-attachment')"
+      >
+        <template #footer-right>
+          <div class="edit-actions">
+            <button class="cancel-btn" @click="cancelEdit">取消</button>
+            <button class="save-btn" @click="saveEdit">保存</button>
+          </div>
+        </template>
+      </EchoEditor>
+    </div>
+    
+    <div v-else class="card-body">
+      <div class="card-content" v-html="echo.spec.content"></div>
+      
+      <div v-if="echo.spec.medias?.length" class="card-medias">
+        <div class="medias-container">
+          <div
+            v-for="(media, index) in echo.spec.medias"
+            :key="index"
+            @click="previewImage(media.url)"
+            class="media-item"
+            :class="{ 'media-file': !media.type?.startsWith('image/') }"
+          >
+            <img
+              v-if="media.type?.startsWith('image/')"
+              :src="media.cover || media.url"
+              :alt="media.displayName || 'image'"
+              class="media-image"
+            />
+            <div v-else class="file-placeholder">
+              <Icon icon="ri:file-text-line" :size="20" />
             </div>
           </div>
         </div>
-        <div v-if="displayWeather || displayMood" class="echo-meta">
-          <span v-if="displayWeather" class="meta-item">{{ displayWeather }}</span>
-          <span v-if="displayMood" class="meta-item">{{ displayMood }}</span>
-        </div>
-        <div class="echo-text" v-html="echo.spec.content"></div>
-        <div v-if="echo.spec.medias?.length" class="echo-medias">
-          <ul class="medias-grid">
-            <li
-              v-for="(media, index) in echo.spec.medias"
-              :key="index"
-              @click="previewImage(media.url)"
-              :class="{ 'media-file': !media.type?.startsWith('image/') }"
-            >
-              <img
-                v-if="media.type?.startsWith('image/')"
-                :src="media.cover || media.url"
-                :alt="media.displayName || 'image'"
-                class="echo-image"
-              />
-              <div v-else class="file-placeholder">
-                <Icon icon="ri:image-line" :size="24" />
-              </div>
-            </li>
-          </ul>
-        </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.echo-item {
-  display: flex;
-  gap: 16px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+.echo-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
 
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+  &:hover {
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.08),
+      0 8px 24px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
   }
 }
 
-.echo-avatar {
-  flex-shrink: 0;
-}
-
-.avatar-placeholder {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: #f1f5f9;
+.card-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-
-  svg {
-    width: 24px;
-    height: 24px;
-  }
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.echo-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.echo-header {
+.date-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  color: white;
+  flex-shrink: 0;
 }
 
-.echo-author {
-  font-size: 15px;
+.badge-date {
+  font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
 }
 
-.echo-time {
+.badge-weekday {
   font-size: 13px;
-  color: #94a3b8;
-  flex: 1;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
-.echo-more-wrapper {
-  position: relative;
-}
-
-.echo-more {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+.card-meta {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+}
+
+.meta-icon {
+  font-size: 16px;
+  padding: 4px 8px;
+  background-color: #f1f5f9;
+  border-radius: 16px;
+}
+
+.card-actions {
+  position: relative;
+  margin-left: auto;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 8px;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  font-size: 14px;
+  font-weight: 500;
 
   &:hover {
-    background-color: #f1f5f9;
-    color: #64748b;
+    background: linear-gradient(135deg, #5a6fd6 0%, #6b429e 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
   }
 
   &.active {
-    background-color: #f1f5f9;
+    background: linear-gradient(135deg, #5a6fd6 0%, #6b429e 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
 }
 
-.echo-dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  min-width: 120px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 4px;
-  z-index: 9999;
+.btn-text {
+  display: inline-block;
 }
 
-.echo-dropdown-item {
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 110px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 9999;
+  border: 1px solid #f1f5f9;
+}
+
+.dropdown-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   color: #475569;
   transition: all 0.15s;
 
   &:hover {
-    background-color: #f1f5f9;
+    background-color: #f8fafc;
     color: #334155;
   }
 
@@ -326,62 +357,71 @@ const formatDate = () => {
   }
 }
 
-.echo-meta {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+.card-body {
+  position: relative;
 }
 
-.meta-item {
-  font-size: 14px;
-  padding: 2px 8px;
-  background-color: #f1f5f9;
-  border-radius: 12px;
-}
-
-.echo-text {
+.card-content {
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #334155;
-  margin: 0 0 12px 0;
   white-space: pre-wrap;
   word-break: break-word;
+  margin-bottom: 16px;
 
   :deep(p) {
-    margin: 0;
-  }
-}
+    margin: 0 0 12px 0;
 
-.echo-medias {
-  margin-top: 12px;
-}
-
-.medias-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-
-  li {
-    aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    background-color: #f8fafc;
-    border: 1px solid #f1f5f9;
-
-    &:hover {
-      opacity: 0.9;
+    &:last-child {
+      margin-bottom: 0;
     }
   }
 }
 
-.echo-image {
+.card-medias {
+  margin-bottom: 12px;
+}
+
+.medias-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.media-item {
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.media-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.file-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.edit-mode {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
 }
 
 .edit-actions {
@@ -390,11 +430,12 @@ const formatDate = () => {
 }
 
 .cancel-btn, .save-btn {
-  padding: 6px 16px;
+  padding: 6px 14px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .cancel-btn {
@@ -408,17 +449,40 @@ const formatDate = () => {
 }
 
 .save-btn {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   color: #fff;
 
   &:hover {
-    background: #2563eb;
+    opacity: 0.9;
+    transform: translateY(-1px);
   }
 }
 
 @media (max-width: 640px) {
-  .medias-grid {
+  .echo-card {
+    padding: 16px;
+  }
+
+  .date-badge {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .badge-date {
+    font-size: 13px;
+  }
+
+  .badge-weekday {
+    font-size: 12px;
+  }
+
+  .meta-icon {
+    font-size: 14px;
+    padding: 2px 6px;
+  }
+
+  .medias-container {
     grid-template-columns: repeat(3, 1fr);
   }
 }

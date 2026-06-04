@@ -337,20 +337,21 @@ const closeDropdowns = () => {
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s;
+  background-color: rgba(102, 126, 234, 0.1);
 
   &:hover {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(102, 126, 234, 0.2);
   }
 }
 
 .attachment-icon {
   width: 1.25rem;
   height: 1.25rem;
-  color: #6b7280;
+  color: #667eea;
   transition: color 0.2s;
 
   .group:hover & {
-    color: #3b82f6;
+    color: #5a6fd6;
   }
 }
 
@@ -370,19 +371,21 @@ const closeDropdowns = () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: #f3f4f6;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 
   &:hover {
-    background-color: #e5e7eb;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
   }
 
   span {
     font-size: 14px;
-    color: #374151;
+    color: #667eea;
+    font-weight: 500;
   }
 }
 

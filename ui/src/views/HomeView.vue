@@ -387,22 +387,27 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background-color: #3b82f6;
+  padding: 10px 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 
   &:hover {
-    background-color: #2563eb;
+    background: linear-gradient(135deg, #5a6fd6 0%, #6b429e 100%);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
   }
 
   &:disabled {
-    background-color: #94a3b8;
+    background: #94a3b8;
     cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
   }
 
   svg {
