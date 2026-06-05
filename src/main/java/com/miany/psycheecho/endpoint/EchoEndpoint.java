@@ -34,7 +34,8 @@ public class EchoEndpoint implements CustomEndpoint {
             .andRoute(GET("/echo/notes/{name}"), this::getNote)
             .andRoute(POST("/echo/notes"), this::createNote)
             .andRoute(PUT("/echo/notes/{name}"), this::updateNote)
-            .andRoute(DELETE("/echo/notes/{name}"), this::deleteNote);
+            .andRoute(DELETE("/echo/notes/{name}"), this::deleteNote)
+            .andRoute(GET("/echo/statistics"), this::getStatistics);
     }
 
     private Mono<ServerResponse> listCategories(org.springframework.web.reactive.function.server.ServerRequest request) {
@@ -115,6 +116,13 @@ public class EchoEndpoint implements CustomEndpoint {
         log.info(String.format("删除日记: %s", name));
         return echoService.deleteEcho(name)
             .then(ServerResponse.ok().bodyValue(ApiResponse.success("删除成功", null)))
+            .onErrorResume(e -> ServerResponse.badRequest().bodyValue(ApiResponse.error(400, e.getMessage())));
+    }
+
+    private Mono<ServerResponse> getStatistics(org.springframework.web.reactive.function.server.ServerRequest request) {
+        log.info("获取统计数据");
+        return echoService.getStatistics()
+            .flatMap(statistics -> ServerResponse.ok().bodyValue(ApiResponse.success(statistics)))
             .onErrorResume(e -> ServerResponse.badRequest().bodyValue(ApiResponse.error(400, e.getMessage())));
     }
 

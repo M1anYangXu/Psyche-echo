@@ -1,17 +1,18 @@
 import { ref, computed } from 'vue'
 import { echoApiClient } from '@/api/echo'
-import type { EchoItem, Category } from '@/types'
+import type { EchoItem, Category, Statistics } from '@/types'
 
 const categories = ref<Category[]>([])
 const allEchoList = ref<EchoItem[]>([])
+const statistics = ref<Statistics | null>(null)
 
-const selectedCategory = ref('全部')
+const selectedCategory = ref('默认')
 const isLoading = ref(false)
 
 export function useEcho() {
   const filteredEchoList = computed(() => {
-    if (selectedCategory.value === '全部') {
-      return allEchoList.value
+    if (selectedCategory.value === '默认') {
+      return allEchoList.value.filter(d => d.spec.categoryName === '默认')
     }
     return allEchoList.value.filter(d => d.spec.categoryName === selectedCategory.value)
   })
@@ -20,12 +21,15 @@ export function useEcho() {
     isLoading.value = true
     try {
       const data = await echoApiClient.categories.list()
+      const defaultCategory = data.find(cat => cat.metadata.name === '默认')
+      const otherCategories = data.filter(cat => cat.metadata.name !== '默认')
+
       categories.value = [
         {
-          metadata: { name: '全部' },
-          spec: { name: '全部', icon: 'ri:folder-fill', count: allEchoList.value.length }
+          metadata: { name: '默认' },
+          spec: { name: '默认', icon: 'ri:folder-fill', count: allEchoList.value.filter(d => d.spec.categoryName === '默认').length }
         },
-        ...data.map(cat => ({
+        ...otherCategories.map(cat => ({
           ...cat,
           spec: {
             ...cat.spec,
@@ -46,10 +50,20 @@ export function useEcho() {
       const data = await echoApiClient.notes.list()
       allEchoList.value = [...data]
       await loadCategories()
+      await loadStatistics()
     } catch (error) {
       console.error('Failed to load echoes:', error)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  const loadStatistics = async () => {
+    try {
+      const data = await echoApiClient.statistics.get()
+      statistics.value = data
+    } catch (error) {
+      console.error('Failed to load statistics:', error)
     }
   }
 
@@ -131,8 +145,10 @@ export function useEcho() {
     filteredEchoList,
     selectedCategory,
     isLoading,
+    statistics,
     loadCategories,
     loadEchoes,
+    loadStatistics,
     selectCategory,
     addEcho,
     updateEcho,

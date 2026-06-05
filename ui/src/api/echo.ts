@@ -1,4 +1,4 @@
-import type { Category, EchoItem } from '@/types'
+import type { Category, EchoItem, Statistics } from '@/types'
 import axios from 'axios'
 
 const echoNoteApiClient = axios.create({
@@ -14,6 +14,7 @@ echoNoteApiClient.interceptors.request.use((config) => {
 })
 
 const API_VERSION = 'echo.miany.run/v1alpha1'
+const CUSTOM_ENDPOINT_PREFIX = 'api.echo.miany.run/v1alpha1'
 
 export const echoApiClient = {
   categories: {
@@ -107,6 +108,13 @@ export const echoApiClient = {
 
     delete: async (name: string): Promise<void> => {
       await echoNoteApiClient.delete(`/apis/${API_VERSION}/echonotes/${name}`)
+    }
+  },
+
+  statistics: {
+    get: async (): Promise<Statistics> => {
+      const response = await echoNoteApiClient.get(`/apis/${CUSTOM_ENDPOINT_PREFIX}/echo/statistics`)
+      return response.data.data
     }
   }
 }

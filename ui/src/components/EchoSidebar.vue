@@ -6,10 +6,12 @@ import type { Category as EchoCategory } from '@/types'
 defineProps<{
   categories: EchoCategory[]
   selectedCategory: string
+  showStats: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'select-category', name: string): void
+  (e: 'toggle-stats'): void
   (e: 'open-new-category'): void
   (e: 'edit-category', category: EchoCategory): void
   (e: 'delete-category', name: string): void
@@ -59,6 +61,14 @@ onUnmounted(() => {
         <Icon icon="ri:book-read-fill" :size="20" />
         记录
       </h2>
+      <button
+        class="stats-btn"
+        :class="{ active: showStats }"
+        @click="emit('toggle-stats')"
+        title="统计"
+      >
+        <Icon icon="ri:bar-chart-fill" :size="18" />
+      </button>
     </div>
 
     <nav class="category-list">
@@ -76,7 +86,7 @@ onUnmounted(() => {
           <span class="category-count">{{ category.spec.count }}</span>
         </button>
 
-        <div class="category-actions">
+        <div v-if="category.metadata.name !== '默认'" class="category-actions">
           <button
             class="action-btn"
             @click="toggleDropdown(category.metadata.name, $event)"
@@ -126,11 +136,39 @@ onUnmounted(() => {
 }
 
 .sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.stats-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+
+  &.active {
+    background: rgba(255, 255, 255, 0.4);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
 }
 
 .sidebar-title {

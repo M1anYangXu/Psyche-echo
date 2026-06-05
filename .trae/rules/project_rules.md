@@ -249,6 +249,23 @@ feat: 实现日记编辑功能
 Closes #123
 ```
 
+### Git 分支规范
+
+**默认分支：**
+- **Gitee**: `master` - 当被要求提交到 Gitee 时，默认使用 `master` 分支
+- **GitHub**: `main` - 当被要求提交到 GitHub 时，默认使用 `main` 分支
+
+**分支命名：**
+- 功能分支: `feature/xxx`
+- Bug修复分支: `fix/xxx`
+- 文档分支: `docs/xxx`
+
+**提交流程：**
+1. 创建特性分支
+2. 完成开发并提交
+3. 合并到默认分支（Gitee: master, GitHub: main）
+4. 推送到远程仓库
+
 ---
 
 ## 🚀 常用命令

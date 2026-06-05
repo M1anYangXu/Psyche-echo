@@ -8,6 +8,7 @@ import {
 import EchoEditor from '@/components/EchoEditor.vue'
 import EchoSidebar from '@/components/EchoSidebar.vue'
 import EchoList from '@/components/EchoList.vue'
+import StatsCard from '@/components/StatsCard.vue'
 import NewCategoryModal from '@/components/NewCategoryModal.vue'
 import ImagePreviewModal from '@/components/ImagePreviewModal.vue'
 import IconSelectorModal from '@/components/IconSelectorModal.vue'
@@ -19,6 +20,7 @@ const {
   filteredEchoList,
   selectedCategory,
   isLoading,
+  statistics,
   loadEchoes,
   selectCategory,
   addEcho,
@@ -28,6 +30,18 @@ const {
   updateCategory,
   removeCategory,
 } = useEcho()
+
+// Stats Page
+const showStats = ref(false)
+
+const toggleStats = () => {
+  showStats.value = !showStats.value
+}
+
+const handleSelectCategory = (name: string) => {
+  showStats.value = false
+  selectCategory(name)
+}
 
 // Category Management
 const newCategoryModal = ref(false)
@@ -64,7 +78,12 @@ const onIconSelect = (iconName: string) => {
 }
 
 const createCategory = async (category: { name: string; icon: string }) => {
-  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '全部').map(cat => cat.metadata.name)
+  if (category.name === '默认') {
+    Toast.error('不能创建名为"默认"的分类')
+    return
+  }
+
+  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '默认').map(cat => cat.metadata.name)
   if (categoryNames.includes(category.name)) {
     Toast.error('分类名称已存在')
     return
@@ -87,7 +106,18 @@ const createCategory = async (category: { name: string; icon: string }) => {
 const saveCategory = async (category: { name: string; icon: string }) => {
   if (!editingCategory.value) return
 
-  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '全部' && cat.metadata.name !== editingCategory.value!.metadata.name).map(cat => cat.metadata.name)
+  if (editingCategory.value.metadata.name === '默认') {
+    Toast.error('默认分类不能修改')
+    closeEditCategoryModal()
+    return
+  }
+
+  if (category.name === '默认') {
+    Toast.error('不能将分类命名为"默认"')
+    return
+  }
+
+  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '默认' && cat.metadata.name !== editingCategory.value!.metadata.name).map(cat => cat.metadata.name)
   if (categoryNames.includes(category.name)) {
     Toast.error('分类名称已存在')
     return
@@ -109,6 +139,11 @@ const saveCategory = async (category: { name: string; icon: string }) => {
 }
 
 const deleteCategory = (name: string) => {
+  if (name === '默认') {
+    Toast.error('默认分类不能删除')
+    return
+  }
+
   Dialog.warning({
     title: '确定要删除该分类吗？',
     description: '该操作不可逆',
@@ -267,14 +302,21 @@ onMounted(() => {
     <EchoSidebar
       :categories="categories"
       :selected-category="selectedCategory"
-      @select-category="selectCategory"
+      :show-stats="showStats"
+      @select-category="handleSelectCategory"
+      @toggle-stats="toggleStats"
       @open-new-category="openNewCategoryModal"
       @edit-category="openEditCategoryModal"
       @delete-category="deleteCategory"
     />
 
     <main class="echo-content">
-      <div class="write-section">
+      <template v-if="showStats">
+        <StatsCard v-if="statistics" :statistics="statistics" />
+      </template>
+
+      <template v-else>
+        <div class="write-section">
         <div class="write-card">
           <EchoEditor
             v-model="newEcho.content"
@@ -310,6 +352,7 @@ onMounted(() => {
         @preview="openPreviewImage"
         @open-attachment="handleOpenAttachment"
       />
+      </template>
     </main>
 
     <ImagePreviewModal

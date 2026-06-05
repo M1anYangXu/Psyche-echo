@@ -232,6 +232,24 @@
           }
         }
       }
+    },
+    "/echo/statistics": {
+      "get": {
+        "summary": "Get statistics",
+        "operationId": "GetStatistics",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Statistics"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -361,6 +379,80 @@
             "items": {
               "$ref": "#/components/schemas/Note"
             }
+          }
+        }
+      },
+      "Statistics": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalNotes": {
+                "type": "integer"
+              },
+              "todayNotes": {
+                "type": "integer"
+              },
+              "thisWeekNotes": {
+                "type": "integer"
+              },
+              "thisMonthNotes": {
+                "type": "integer"
+              },
+              "categoryStats": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "monthlyStats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MonthlyStat"
+                }
+              },
+              "recentDaysStats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DailyStat"
+                }
+              },
+              "earliestDate": {
+                "type": "string"
+              },
+              "latestDate": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "MonthlyStat": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "DailyStat": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
           }
         }
       }

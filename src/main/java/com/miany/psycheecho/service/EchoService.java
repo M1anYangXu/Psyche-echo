@@ -2,6 +2,7 @@ package com.miany.psycheecho.service;
 
 import com.miany.psycheecho.content.EchoCategory;
 import com.miany.psycheecho.content.EchoNote;
+import com.miany.psycheecho.dto.response.StatisticsDTO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,4 +29,6 @@ public interface EchoService {
     Mono<Void> deleteEcho(String name);
 
     void initializeDefaultCategories();
+
+    Mono<StatisticsDTO> getStatistics();
 }

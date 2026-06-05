@@ -52,3 +52,25 @@ export interface ApiResponse<T> {
   message: string
   data: T
 }
+
+export interface Statistics {
+  totalNotes: number
+  todayNotes: number
+  thisWeekNotes: number
+  thisMonthNotes: number
+  categoryStats: Record<string, number>
+  monthlyStats: MonthlyStat[]
+  recentDaysStats: DailyStat[]
+  earliestDate: string | null
+  latestDate: string | null
+}
+
+export interface MonthlyStat {
+  month: string
+  count: number
+}
+
+export interface DailyStat {
+  date: string
+  count: number
+}

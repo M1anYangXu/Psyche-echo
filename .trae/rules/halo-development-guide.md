@@ -445,5 +445,86 @@ log.debug("Extension client operation: {}", operation);
 
 ---
 
-**最后更新：** 2026-06-01
+## 🔄 Git 工作流规范
+
+### 1. 远程仓库配置
+
+**Gitee（国内）：**
+- 默认分支：`master`
+- 用途：主分支，生产环境部署
+
+**GitHub（国际）：**
+- 默认分支：`main`
+- 用途：主分支，生产环境部署
+
+**分支映射：**
+- Gitee `master` ↔ GitHub `main`（同步镜像）
+
+### 2. 分支命名规范
+
+| 分支类型 | 命名格式 | 示例 |
+|---------|---------|------|
+| 功能分支 | `feature/xxx` | `feature/diary-statistics` |
+| Bug修复 | `fix/xxx` | `fix/api-404-error` |
+| 文档更新 | `docs/xxx` | `docs/update-readme` |
+| 重构分支 | `refactor/xxx` | `refactor/database-schema` |
+| 测试分支 | `test/xxx` | `test/api-test` |
+
+### 3. 提交规范
+
+**提交信息格式：**
+```
+<type>: <subject>
+
+<body>
+
+<footer>
+```
+
+**Type类型：**
+- `feat`: 新功能
+- `fix`: Bug修复
+- `docs`: 文档更新
+- `style`: 代码格式（不影响功能）
+- `refactor`: 重构
+- `test`: 测试
+- `chore`: 构建/工具
+
+**示例：**
+```
+feat: 实现日记统计功能
+
+1. 添加 StatisticsDTO 数据传输对象
+2. 实现统计API端点
+3. 添加前端统计卡片组件
+
+Closes #123
+```
+
+### 4. 同步流程
+
+**从 Gitee 同步到 GitHub：**
+```bash
+# 添加远程仓库
+git remote add gitee https://gitee.com/username/repo.git
+git remote add github https://github.com/username/repo.git
+
+# 从 Gitee master 拉取最新
+git checkout master
+git pull gitee master
+
+# 推送到 GitHub main
+git push github master:main
+```
+
+**从 GitHub 同步到 Gitee：**
+```bash
+git checkout main
+git pull github main
+git push gitee main:master
+```
+
+---
+
+**最后更新：** 2026-06-05
 **维护者：** Soul Echoes 开发团队

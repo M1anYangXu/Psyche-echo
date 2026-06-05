@@ -2,6 +2,7 @@ package com.miany.psycheecho.service.impl;
 
 import com.miany.psycheecho.content.EchoCategory;
 import com.miany.psycheecho.content.EchoNote;
+import com.miany.psycheecho.dto.response.StatisticsDTO;
 import com.miany.psycheecho.service.EchoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,12 +12,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.User;
 import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.ListOptions;
 
-import java.util.Comparator;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +73,10 @@ public class EchoServiceImpl implements EchoService {
 
     @Override
     public Mono<EchoCategory> updateCategory(String name, EchoCategory category) {
+        if ("默认".equals(name)) {
+            return Mono.error(new IllegalArgumentException("默认分类不能修改"));
+        }
+        
         var existingOpt = extensionClient.fetch(EchoCategory.class, name);
         if (existingOpt.isEmpty()) {
             return Mono.error(new IllegalArgumentException("分类不存在: " + name));
@@ -87,6 +98,10 @@ public class EchoServiceImpl implements EchoService {
 
     @Override
     public Mono<Void> deleteCategory(String name) {
+        if ("默认".equals(name)) {
+            return Mono.error(new IllegalArgumentException("默认分类不能删除"));
+        }
+        
         return Mono.fromCallable(() -> extensionClient.fetch(EchoCategory.class, name))
                 .flatMap(categoryOpt -> {
                     if (categoryOpt.isEmpty()) {
@@ -102,6 +117,7 @@ public class EchoServiceImpl implements EchoService {
         
         if (categoryId == null || categoryId.equals("1") || categoryId.equals("all") || categoryId.equals("全部")) {
             return Flux.fromIterable(allNotes)
+                    .filter(note -> "默认".equals(note.getStatus().getCategoryId()))
                     .sort(Comparator.comparing(n -> n.getMetadata().getName()));
         }
         
@@ -134,10 +150,10 @@ public class EchoServiceImpl implements EchoService {
         echo.getStatus().setVisitCount(0L);
 
         if (echo.getSpec().getCategoryName() == null) {
-            echo.getSpec().setCategoryName("生活");
+            echo.getSpec().setCategoryName("默认");
         }
         if (echo.getStatus().getCategoryId() == null) {
-            echo.getStatus().setCategoryId("生活");
+            echo.getStatus().setCategoryId("默认");
         }
 
         return getContextUser()
@@ -243,7 +259,7 @@ public class EchoServiceImpl implements EchoService {
     @Override
     public void initializeDefaultCategories() {
         List<String[]> defaultCategories = List.of(
-                new String[]{"全部", "folder"},
+                new String[]{"默认", "folder"},
                 new String[]{"生活", "book"},
                 new String[]{"工作", "computer"},
                 new String[]{"心情", "motion"},
@@ -272,7 +288,7 @@ public class EchoServiceImpl implements EchoService {
     }
 
     private void updateCategoryCount(String categoryId, int delta) {
-        if (categoryId == null || categoryId.equals("1") || categoryId.equals("全部")) {
+        if (categoryId == null || categoryId.equals("1") || categoryId.equals("全部") || categoryId.equals("默认")) {
             return;
         }
 
@@ -282,5 +298,167 @@ public class EchoServiceImpl implements EchoService {
             category.getSpec().setCount(Math.max(0, currentCount + delta));
             extensionClient.update(category);
         });
+    }
+
+    @Override
+    public Mono<StatisticsDTO> getStatistics() {
+        log.info("获取日记统计信息");
+        return Mono.fromSupplier(() -> {
+                var allNotes = extensionClient.listAll(EchoNote.class, ListOptions.builder().build(), null);
+                
+                LocalDate today = LocalDate.now();
+                LocalDate weekStart = today.minusDays(7);
+                LocalDate monthStart = today.with(TemporalAdjusters.firstDayOfMonth());
+                
+                long totalNotes = allNotes.size();
+                
+                long todayNotes = allNotes.stream()
+                        .filter(note -> isSameDay(note, today))
+                        .count();
+                
+                long thisWeekNotes = allNotes.stream()
+                        .filter(note -> isInDateRange(note, weekStart, today))
+                        .count();
+                
+                long thisMonthNotes = allNotes.stream()
+                        .filter(note -> isInDateRange(note, monthStart, today))
+                        .count();
+                
+                Map<String, Long> categoryStats = allNotes.stream()
+                        .collect(Collectors.groupingBy(
+                                note -> note.getSpec() != null && note.getSpec().getCategoryName() != null 
+                                        ? note.getSpec().getCategoryName() 
+                                        : "默认",
+                                Collectors.counting()
+                        ));
+                
+                List<StatisticsDTO.MonthlyStat> monthlyStats = generateMonthlyStats(allNotes);
+                
+                List<StatisticsDTO.DailyStat> recentDaysStats = generateRecentDaysStats(allNotes, 14);
+                
+                String earliestDate = null;
+                String latestDate = null;
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                
+                if (!allNotes.isEmpty()) {
+                    Optional<EchoNote> earliest = allNotes.stream()
+                            .min(Comparator.comparing(n -> n.getMetadata().getCreationTimestamp()));
+                    Optional<EchoNote> latest = allNotes.stream()
+                            .max(Comparator.comparing(n -> n.getMetadata().getCreationTimestamp()));
+                    
+                    earliestDate = earliest.map(n -> parseDate(n.getMetadata().getCreationTimestamp(), formatter)).orElse(null);
+                    latestDate = latest.map(n -> parseDate(n.getMetadata().getCreationTimestamp(), formatter)).orElse(null);
+                }
+                
+                return StatisticsDTO.builder()
+                        .totalNotes(totalNotes)
+                        .todayNotes(todayNotes)
+                        .thisWeekNotes(thisWeekNotes)
+                        .thisMonthNotes(thisMonthNotes)
+                        .categoryStats(categoryStats)
+                        .monthlyStats(monthlyStats)
+                        .recentDaysStats(recentDaysStats)
+                        .earliestDate(earliestDate)
+                        .latestDate(latestDate)
+                        .build();
+            })
+            .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private boolean isSameDay(EchoNote note, LocalDate date) {
+        if (note.getMetadata().getCreationTimestamp() == null) {
+            return false;
+        }
+        try {
+            LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+            return timestamp.toLocalDate().equals(date);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isInDateRange(EchoNote note, LocalDate start, LocalDate end) {
+        if (note.getMetadata().getCreationTimestamp() == null) {
+            return false;
+        }
+        try {
+            LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+            LocalDate noteDate = timestamp.toLocalDate();
+            return !noteDate.isBefore(start) && !noteDate.isAfter(end);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private List<StatisticsDTO.MonthlyStat> generateMonthlyStats(List<EchoNote> notes) {
+        Map<String, Long> monthlyCounts = notes.stream()
+                .filter(note -> note.getMetadata().getCreationTimestamp() != null)
+                .collect(Collectors.groupingBy(
+                        note -> {
+                            try {
+                                LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDateTime();
+                                return timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+                            } catch (Exception e) {
+                                return "unknown";
+                            }
+                        },
+                        Collectors.counting()
+                ));
+        
+        return monthlyCounts.entrySet().stream()
+                .filter(entry -> !"unknown".equals(entry.getKey()))
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> StatisticsDTO.MonthlyStat.builder()
+                        .month(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private List<StatisticsDTO.DailyStat> generateRecentDaysStats(List<EchoNote> notes, int days) {
+        LocalDate today = LocalDate.now();
+        Map<String, Long> dailyCounts = notes.stream()
+                .filter(note -> note.getMetadata().getCreationTimestamp() != null)
+                .collect(Collectors.groupingBy(
+                        note -> {
+                            try {
+                                LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDateTime();
+                                return timestamp.toLocalDate().toString();
+                            } catch (Exception e) {
+                                return "unknown";
+                            }
+                        },
+                        Collectors.counting()
+                ));
+        
+        List<StatisticsDTO.DailyStat> stats = new ArrayList<>();
+        
+        for (int i = days - 1; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            String dateStr = date.toString();
+            stats.add(StatisticsDTO.DailyStat.builder()
+                    .date(dateStr)
+                    .count(dailyCounts.getOrDefault(dateStr, 0L))
+                    .build());
+        }
+        
+        return stats;
+    }
+
+    private String parseDate(java.time.Instant timestamp, DateTimeFormatter formatter) {
+        try {
+            LocalDateTime dateTime = timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return dateTime.toLocalDate().format(formatter);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
