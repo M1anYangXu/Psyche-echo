@@ -20,19 +20,31 @@ const emit = defineEmits<{
 
 const editContent = ref(props.echo.spec.content)
 const editMedias = ref([...(props.echo.spec.medias || [])])
-const editWeather = ref(props.echo.spec.weather || '')
+const editWeatherDay = ref(props.echo.spec.weatherDay || '')
+const editWeatherNight = ref(props.echo.spec.weatherNight || '')
 const editMood = ref(props.echo.spec.mood || '')
+const editLocation = ref(props.echo.spec.location || '')
+const editEnvironment = ref(props.echo.spec.environment || '')
 const showDropdown = ref(false)
 
 const weatherIcons: Record<string, string> = {
-  sunny: '☀️',
-  cloudy: '☁️',
-  lightRain: '🌧️',
-  heavyRain: '⛈️',
-  lightSnow: '❄️',
-  heavySnow: '🌨️',
-  windy: '🌬️',
-  foggy: '🌫️',
+  '晴': '☀️',
+  '多云': '☁️',
+  '阴': '🌥️',
+  '小雨': '🌧️',
+  '中雨': '🌧️',
+  '大雨': '⛈️',
+  '暴雨': '⛈️',
+  '雷阵雨': '⛈️',
+  '小雪': '❄️',
+  '中雪': '❄️',
+  '大雪': '🌨️',
+  '暴雪': '🌨️',
+  '雨夹雪': '🌨️',
+  '雾': '🌫️',
+  '霾': '🌫️',
+  '风': '🌬️',
+  '大风': '🌬️',
 }
 
 const moodIcons: Record<string, string> = {
@@ -44,14 +56,38 @@ const moodIcons: Record<string, string> = {
   anxious: '😰',
   peaceful: '😌',
   confused: '😕',
+  calm: '😌',
+  hopeful: '😊',
+  grateful: '🙏',
+  love: '❤️',
+  surprised: '😲',
+}
+
+const environmentIcons: Record<string, string> = {
+  indoor: '🏠',
+  outdoor: '🌳',
 }
 
 const displayWeather = computed(() => {
-  return props.echo.spec.weather ? weatherIcons[props.echo.spec.weather] : ''
+  const dayWeather = props.echo.spec.weatherDay
+  const nightWeather = props.echo.spec.weatherNight
+  if (!dayWeather) return ''
+  const dayIcon = weatherIcons[dayWeather] || '🌤️'
+  if (!nightWeather) return dayIcon
+  const nightIcon = weatherIcons[nightWeather] || '🌙'
+  return `${dayIcon}→${nightIcon}`
 })
 
 const displayMood = computed(() => {
-  return props.echo.spec.mood ? moodIcons[props.echo.spec.mood] : ''
+  const mood = props.echo.spec.mood
+  if (!mood) return ''
+  return moodIcons[mood.toLowerCase()] || '😐'
+})
+
+const displayEnvironment = computed(() => {
+  const env = props.echo.spec.environment
+  if (!env) return ''
+  return environmentIcons[env] || ''
 })
 
 watch(() => props.echo.spec.content, (newVal) => {
@@ -62,12 +98,24 @@ watch(() => props.echo.spec.medias, (newMedias) => {
   editMedias.value = [...(newMedias || [])]
 }, { immediate: true, deep: true })
 
-watch(() => props.echo.spec.weather, (newWeather) => {
-  editWeather.value = newWeather || ''
+watch(() => props.echo.spec.weatherDay, (newWeather) => {
+  editWeatherDay.value = newWeather || ''
+})
+
+watch(() => props.echo.spec.weatherNight, (newWeather) => {
+  editWeatherNight.value = newWeather || ''
 })
 
 watch(() => props.echo.spec.mood, (newMood) => {
   editMood.value = newMood || ''
+})
+
+watch(() => props.echo.spec.location, (newLocation) => {
+  editLocation.value = newLocation || ''
+})
+
+watch(() => props.echo.spec.environment, (newEnv) => {
+  editEnvironment.value = newEnv || ''
 })
 
 const startEdit = () => {
@@ -83,12 +131,24 @@ const handleUpdateMedias = (newMedias: Array<{ url: string; type: string; cover?
   emit('update-medias', [...newMedias])
 }
 
-const handleUpdateWeather = (weather: string) => {
-  editWeather.value = weather
+const handleUpdateWeatherDay = (weather: string) => {
+  editWeatherDay.value = weather
+}
+
+const handleUpdateWeatherNight = (weather: string) => {
+  editWeatherNight.value = weather
 }
 
 const handleUpdateMood = (mood: string) => {
   editMood.value = mood
+}
+
+const handleUpdateLocation = (location: string) => {
+  editLocation.value = location
+}
+
+const handleUpdateEnvironment = (env: string) => {
+  editEnvironment.value = env
 }
 
 const saveEdit = () => {
@@ -98,8 +158,11 @@ const saveEdit = () => {
       ...props.echo.spec,
       content: editContent.value,
       medias: [...editMedias.value],
-      weather: editWeather.value,
+      weatherDay: editWeatherDay.value,
+      weatherNight: editWeatherNight.value,
       mood: editMood.value,
+      location: editLocation.value,
+      environment: editEnvironment.value,
     }
   }
   emit('save', updatedEcho)
@@ -144,9 +207,11 @@ const getDateInfo = () => {
         <span class="badge-date">{{ getDateInfo().month }}月{{ getDateInfo().day }}日 {{ getDateInfo().time }}</span>
         <span class="badge-weekday">{{ getWeekDay() }}</span>
       </div>
-      <div v-if="displayWeather || displayMood" class="card-meta">
-        <span v-if="displayWeather" class="meta-icon">{{ displayWeather }}</span>
-        <span v-if="displayMood" class="meta-icon">{{ displayMood }}</span>
+      <div v-if="displayWeather || displayMood || echo.spec.location || displayEnvironment" class="card-meta">
+        <span v-if="displayWeather" class="meta-icon weather">{{ displayWeather }}</span>
+        <span v-if="displayMood" class="meta-icon mood">{{ displayMood }}</span>
+        <span v-if="displayEnvironment" class="meta-icon environment">{{ displayEnvironment }}</span>
+        <span v-if="echo.spec.location" class="meta-icon location">📍 {{ echo.spec.location }}</span>
       </div>
       <div class="card-actions">
         <button
@@ -169,16 +234,23 @@ const getDateInfo = () => {
         </div>
       </div>
     </div>
-    
+
     <div v-if="echo.editing" class="card-body edit-mode">
       <EchoEditor
         v-model="editContent"
         :medias="editMedias"
-        :weather="editWeather"
         :mood="editMood"
+        :environment="editEnvironment"
+        :editing="true"
+        :weatherDay="echo.spec.weatherDay"
+        :weatherNight="echo.spec.weatherNight"
+        :location="echo.spec.location"
         @update:medias="handleUpdateMedias"
-        @update:weather="handleUpdateWeather"
+        @update:weatherDay="handleUpdateWeatherDay"
+        @update:weatherNight="handleUpdateWeatherNight"
         @update:mood="handleUpdateMood"
+        @update:location="handleUpdateLocation"
+        @update:environment="handleUpdateEnvironment"
         @open-attachment="$emit('open-attachment')"
       >
         <template #footer-right>
@@ -189,10 +261,10 @@ const getDateInfo = () => {
         </template>
       </EchoEditor>
     </div>
-    
+
     <div v-else class="card-body">
       <div class="card-content" v-html="echo.spec.content"></div>
-      
+
       <div v-if="echo.spec.medias?.length" class="card-medias">
         <div class="medias-container">
           <div
@@ -224,14 +296,14 @@ const getDateInfo = () => {
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 
+  box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.05),
     0 4px 12px rgba(0, 0, 0, 0.04);
   border: 1px solid #f0f0f0;
   transition: all 0.2s ease;
 
   &:hover {
-    box-shadow: 
+    box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.08),
       0 8px 24px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
@@ -278,6 +350,24 @@ const getDateInfo = () => {
   padding: 4px 8px;
   background-color: #f1f5f9;
   border-radius: 16px;
+
+  &.weather {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.15) 100%);
+  }
+
+  &.mood {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(234, 88, 12, 0.15) 100%);
+  }
+
+  &.location {
+    font-size: 13px;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  &.environment {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%);
+  }
 }
 
 .card-actions {

@@ -28,8 +28,12 @@ export interface EchoItem {
       cover?: string
       displayName?: string
     }>
-    weather?: string
+    weatherDay?: string
+    weatherNight?: string
     mood?: string
+    location?: string
+    adcode?: string
+    environment?: string
   }
   status: {
     categoryId: string
@@ -59,6 +63,10 @@ export interface Statistics {
   thisWeekNotes: number
   thisMonthNotes: number
   categoryStats: Record<string, number>
+  moodStats: Record<string, number>
+  weatherStats: Record<string, number>
+  environmentStats: Record<string, number>
+  locationStats: Record<string, number>
   monthlyStats: MonthlyStat[]
   recentDaysStats: DailyStat[]
   earliestDate: string | null

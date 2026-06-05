@@ -12,8 +12,12 @@ import EmojiSelectorModal from './EmojiSelectorModal.vue'
 const props = defineProps<{
   modelValue: string
   medias?: Array<{ url: string; type: string; cover?: string; displayName?: string }>
-  weather?: string
   mood?: string
+  environment?: string
+  editing?: boolean
+  weatherDay?: string
+  weatherNight?: string
+  location?: string
 }>()
 
 const emit = defineEmits<{
@@ -21,26 +25,173 @@ const emit = defineEmits<{
   (e: 'open-attachment'): void
   (e: 'remove-media', index: number): void
   (e: 'update:medias', medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>): void
-  (e: 'update:weather', value: string): void
+  (e: 'update:weatherDay', value: string): void
+  (e: 'update:weatherNight', value: string): void
   (e: 'update:mood', value: string): void
+  (e: 'update:location', value: string): void
+  (e: 'update:adcode', value: string): void
+  (e: 'update:environment', value: string): void
 }>()
+
+const currentCity = ref('')
+const currentAdcode = ref('')
+const weatherDay = ref('')
+const weatherNight = ref('')
+
+const weatherEmojis: Record<string, string> = {
+  '晴': '☀️',
+  '多云': '☁️',
+  '阴': '🌥️',
+  '小雨': '🌧️',
+  '中雨': '🌧️',
+  '大雨': '⛈️',
+  '暴雨': '⛈️',
+  '雷阵雨': '⛈️',
+  '小雪': '❄️',
+  '中雪': '❄️',
+  '大雪': '🌨️',
+  '暴雪': '🌨️',
+  '雨夹雪': '🌨️',
+  '雾': '🌫️',
+  '霾': '🌫️',
+  '风': '🌬️',
+  '大风': '🌬️',
+}
+
+const getWeatherEmoji = (weather: string) => {
+  return weatherEmojis[weather] || '🌤️'
+}
+
+const fetchWeather = async (adcode: string) => {
+  try {
+    const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=1560db1cdb6f71f169d02454758d2e40&city=${adcode}&extensions=all`)
+    const data = await response.json()
+    console.log('=== 完整天气返回 ===')
+    console.log('完整数据:', JSON.stringify(data, null, 2))
+    console.log('status:', data.status)
+    console.log('info:', data.info)
+    console.log('infocode:', data.infocode)
+    console.log('count:', data.count)
+    if (data.lives) {
+      console.log('lives数据:', data.lives)
+    }
+    if (data.forecasts) {
+      console.log('forecasts数据:', data.forecasts)
+    }
+    console.log('====================')
+    
+    if (data.status === '1' && data.forecasts && data.forecasts.length > 0 && data.forecasts[0].casts && data.forecasts[0].casts.length > 0) {
+      const forecast = data.forecasts[0].casts[0]
+      console.log('使用预报天气 - 白天:', forecast.dayweather, ', 晚上:', forecast.nightweather)
+      weatherDay.value = forecast.dayweather
+      weatherNight.value = forecast.nightweather
+      emit('update:weatherDay', forecast.dayweather)
+      emit('update:weatherNight', forecast.nightweather)
+    } else if (data.status === '1' && data.lives && data.lives.length > 0) {
+      const weatherData = data.lives[0]
+      console.log('使用实时天气（无预报数据） - 天气:', weatherData.weather)
+      weatherDay.value = weatherData.weather
+      weatherNight.value = weatherData.weather
+      emit('update:weatherDay', weatherData.weather)
+      emit('update:weatherNight', weatherData.weather)
+    }
+  } catch (e) {
+    console.error('获取天气失败:', e)
+  }
+}
+
+const fetchCityFromCoords = async (lat: number, lng: number) => {
+  try {
+    const response = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=1560db1cdb6f71f169d02454758d2e40&location=${lng},${lat}`)
+    const data = await response.json()
+    if (data.status === '1' && data.regeocode) {
+      const addressComponent = data.regeocode.addressComponent
+      currentAdcode.value = addressComponent.adcode || ''
+      emit('update:adcode', currentAdcode.value)
+      if (addressComponent.province && addressComponent.city && addressComponent.district) {
+        currentCity.value = `${addressComponent.province}：${addressComponent.city}：${addressComponent.district}`
+      } else if (addressComponent.province && addressComponent.city) {
+        currentCity.value = `${addressComponent.province}：${addressComponent.city}`
+      } else if (addressComponent.city) {
+        currentCity.value = addressComponent.city
+      } else if (addressComponent.province) {
+        currentCity.value = addressComponent.province
+      }
+      emit('update:location', currentCity.value)
+      if (currentAdcode.value) {
+        fetchWeather(currentAdcode.value)
+      }
+      return true
+    }
+  } catch (e) {
+    console.error('逆地理编码失败:', e)
+  }
+  return false
+}
+
+const fetchCityFromIP = async () => {
+  try {
+    const response = await fetch('https://restapi.amap.com/v3/ip?key=1560db1cdb6f71f169d02454758d2e40')
+    const data = await response.json()
+    console.log('高德定位返回:', data)
+    if (data.status === '1') {
+      currentAdcode.value = data.adcode || ''
+      emit('update:adcode', currentAdcode.value)
+      if (data.city && data.province) {
+        currentCity.value = `${data.province}：${data.city}`
+      } else if (data.city) {
+        currentCity.value = data.city
+      } else if (data.province) {
+        currentCity.value = data.province
+      } else {
+        currentCity.value = '未知城市'
+      }
+      emit('update:location', currentCity.value)
+      if (currentAdcode.value) {
+        fetchWeather(currentAdcode.value)
+      }
+    } else {
+      currentCity.value = '未知城市'
+    }
+  } catch (error) {
+    console.error('获取城市失败:', error)
+    currentCity.value = '未知城市'
+  }
+}
+
+const getLocationByGPS = () => {
+  if (!navigator.geolocation) {
+    console.warn('浏览器不支持定位，将使用IP定位')
+    fetchCityFromIP()
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords
+      const success = await fetchCityFromCoords(latitude, longitude)
+      if (!success) {
+        console.warn('GPS定位成功，但获取城市信息失败')
+        fetchCityFromIP()
+      }
+    },
+    (error) => {
+      console.warn('GPS定位失败，将使用IP定位:', error)
+      fetchCityFromIP()
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 300000
+    }
+  )
+}
 
 const editor = shallowRef<VueEditor>()
 const localMedias = ref<Array<{ url: string; type: string; cover?: string; displayName?: string }>>([])
 const emojiSelectorModal = ref(false)
-const showWeatherDropdown = ref(false)
 const showMoodDropdown = ref(false)
-
-const weatherOptions = [
-  { value: 'sunny', label: '☀️ 晴天' },
-  { value: 'cloudy', label: '☁️ 多云' },
-  { value: 'lightRain', label: '🌧️ 小雨' },
-  { value: 'heavyRain', label: '⛈️ 大雨' },
-  { value: 'lightSnow', label: '❄️ 小雪' },
-  { value: 'heavySnow', label: '🌨️ 大雪' },
-  { value: 'windy', label: '🌬️ 大风' },
-  { value: 'foggy', label: '🌫️ 雾天' },
-]
+const showEnvironmentDropdown = ref(false)
 
 const moodOptions = [
   { value: 'happy', label: '😊 开心' },
@@ -53,24 +204,29 @@ const moodOptions = [
   { value: 'confused', label: '😕 困惑' },
 ]
 
-const selectedWeatherLabel = computed(() => {
-  const option = weatherOptions.find(w => w.value === props.weather)
-  return option ? option.label : '🌤️ 天气'
-})
+const environmentOptions = [
+  { value: 'indoor', label: '🏠 室内' },
+  { value: 'outdoor', label: '🌳 户外' },
+]
 
 const selectedMoodLabel = computed(() => {
   const option = moodOptions.find(m => m.value === props.mood)
   return option ? option.label : '💭 心情'
 })
 
-const selectWeather = (value: string) => {
-  emit('update:weather', value === props.weather ? '' : value)
-  showWeatherDropdown.value = false
-}
+const selectedEnvironmentLabel = computed(() => {
+  const option = environmentOptions.find(e => e.value === props.environment)
+  return option ? option.label : '📍 场景'
+})
 
 const selectMood = (value: string) => {
   emit('update:mood', value === props.mood ? '' : value)
   showMoodDropdown.value = false
+}
+
+const selectEnvironment = (value: string) => {
+  emit('update:environment', value === props.environment ? '' : value)
+  showEnvironmentDropdown.value = false
 }
 
 const onEmojiSelect = (emoji: string) => {
@@ -101,6 +257,14 @@ onMounted(() => {
       emit('update:modelValue', editor.value?.getHTML() || '')
     },
   })
+
+  if (props.editing) {
+    weatherDay.value = props.weatherDay || ''
+    weatherNight.value = props.weatherNight || ''
+    currentCity.value = props.location || ''
+  } else {
+    getLocationByGPS()
+  }
 })
 
 watch(
@@ -123,8 +287,8 @@ watch(
 )
 
 const closeDropdowns = () => {
-  showWeatherDropdown.value = false
   showMoodDropdown.value = false
+  showEnvironmentDropdown.value = false
 }
 </script>
 
@@ -155,27 +319,19 @@ const closeDropdowns = () => {
           <span class="emoji-icon">😊</span>
         </div>
         <div class="divider"></div>
-        <div
-          class="selector-group"
-          @click.stop="showWeatherDropdown = !showWeatherDropdown; showMoodDropdown = false"
-        >
-          <span>{{ selectedWeatherLabel }}</span>
-          <span class="dropdown-arrow">▼</span>
-          <div v-if="showWeatherDropdown" class="dropdown-menu">
-            <button
-              v-for="weather in weatherOptions"
-              :key="weather.value"
-              class="dropdown-item"
-              :class="{ active: weather.value === props.weather }"
-              @click.stop="selectWeather(weather.value)"
-            >
-              {{ weather.label }}
-            </button>
-          </div>
+        <div v-if="weatherDay && weatherNight" class="weather-display">
+          <span class="weather-emoji">{{ getWeatherEmoji(weatherDay) }}</span>
+          <span class="weather-text">{{ weatherDay }}</span>
+          <span class="weather-arrow">→</span>
+          <span class="weather-emoji">{{ getWeatherEmoji(weatherNight) }}</span>
+          <span class="weather-text">{{ weatherNight }}</span>
+        </div>
+        <div v-else class="weather-loading">
+          <span>🌤️ 加载天气...</span>
         </div>
         <div
           class="selector-group"
-          @click.stop="showMoodDropdown = !showMoodDropdown; showWeatherDropdown = false"
+          @click.stop="showMoodDropdown = !showMoodDropdown; showEnvironmentDropdown = false"
         >
           <span>{{ selectedMoodLabel }}</span>
           <span class="dropdown-arrow">▼</span>
@@ -191,6 +347,30 @@ const closeDropdowns = () => {
             </button>
           </div>
         </div>
+        <div
+          class="selector-group"
+          @click.stop="showEnvironmentDropdown = !showEnvironmentDropdown; showMoodDropdown = false"
+        >
+          <span>{{ selectedEnvironmentLabel }}</span>
+          <span class="dropdown-arrow">▼</span>
+          <div v-if="showEnvironmentDropdown" class="dropdown-menu">
+            <button
+              v-for="env in environmentOptions"
+              :key="env.value"
+              class="dropdown-item"
+              :class="{ active: env.value === props.environment }"
+              @click.stop="selectEnvironment(env.value)"
+            >
+              {{ env.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="footer-center">
+        <span v-if="currentCity" class="location-badge">
+          📍 {{ currentCity }}
+          <button class="refresh-location-btn" @click.stop="getLocationByGPS" title="重新定位">🔄</button>
+        </span>
       </div>
       <div class="footer-right">
         <slot name="footer-right"></slot>
@@ -321,6 +501,74 @@ const closeDropdowns = () => {
   padding: 0.875rem;
   background-color: #fff;
   border-top: 1px solid #e5e7eb;
+}
+
+.footer-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.location-badge {
+  padding: 6px 12px;
+  border-radius: 16px;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-location-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  transition: transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    transform: rotate(180deg);
+  }
+}
+
+.weather-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.15) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.weather-emoji {
+  font-size: 16px;
+}
+
+.weather-text {
+  font-size: 13px;
+  color: #0891b2;
+  font-weight: 500;
+}
+
+.weather-arrow {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 2px;
+}
+
+.weather-loading {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(148, 163, 184, 0.1);
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 .footer-left {

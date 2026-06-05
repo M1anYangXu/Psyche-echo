@@ -32,7 +32,7 @@ const {
 } = useEcho()
 
 // Stats Page
-const showStats = ref(false)
+const showStats = ref(true)
 
 const toggleStats = () => {
   showStats.value = !showStats.value
@@ -162,8 +162,12 @@ const deleteCategory = (name: string) => {
 // Echo Publishing
 const newEcho = reactive({
   content: '',
-  weather: '',
+  weatherDay: '',
+  weatherNight: '',
   mood: '',
+  location: '',
+  adcode: '',
+  environment: '',
 })
 const selectedMedias = ref<Array<{ url: string; type: string; cover?: string; displayName?: string }>>([])
 const currentlyEditingEcho = ref<EchoItem | null>(null)
@@ -227,8 +231,12 @@ const publishEcho = async () => {
           url: m.url,
           type: m.type,
         })),
-        weather: newEcho.weather,
+        weatherDay: newEcho.weatherDay,
+        weatherNight: newEcho.weatherNight,
         mood: newEcho.mood,
+        location: newEcho.location,
+        adcode: newEcho.adcode,
+        environment: newEcho.environment,
       },
       status: {
         categoryId: selectedCategory.value,
@@ -237,8 +245,12 @@ const publishEcho = async () => {
       },
     })
     newEcho.content = ''
-    newEcho.weather = ''
+    newEcho.weatherDay = ''
+    newEcho.weatherNight = ''
     newEcho.mood = ''
+    newEcho.location = ''
+    newEcho.adcode = ''
+    newEcho.environment = ''
     selectedMedias.value = []
     Toast.success('发布成功')
   } catch {
@@ -321,11 +333,15 @@ onMounted(() => {
           <EchoEditor
             v-model="newEcho.content"
             :medias="selectedMedias"
-            :weather="newEcho.weather"
             :mood="newEcho.mood"
+            :environment="newEcho.environment"
             @update:medias="handleUpdateMedias"
-            @update:weather="newEcho.weather = $event"
+            @update:weatherDay="newEcho.weatherDay = $event"
+            @update:weatherNight="newEcho.weatherNight = $event"
             @update:mood="newEcho.mood = $event"
+            @update:location="newEcho.location = $event"
+            @update:adcode="newEcho.adcode = $event"
+            @update:environment="newEcho.environment = $event"
             @open-attachment="handleOpenAttachment"
           >
             <template #footer-right>

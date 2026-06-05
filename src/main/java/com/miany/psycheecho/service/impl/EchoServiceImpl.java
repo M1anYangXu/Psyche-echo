@@ -331,7 +331,43 @@ public class EchoServiceImpl implements EchoService {
                                         : "默认",
                                 Collectors.counting()
                         ));
-                
+                        
+                Map<String, Long> moodStats = allNotes.stream()
+                        .filter(note -> note.getSpec() != null && note.getSpec().getMood() != null && !note.getSpec().getMood().isEmpty())
+                        .collect(Collectors.groupingBy(
+                                note -> note.getSpec().getMood(),
+                                Collectors.counting()
+                        ));
+                        
+                Map<String, Long> weatherStats = allNotes.stream()
+                        .filter(note -> note.getSpec() != null && note.getSpec().getWeatherDay() != null && !note.getSpec().getWeatherDay().isEmpty())
+                        .collect(Collectors.groupingBy(
+                                note -> note.getSpec().getWeatherDay(),
+                                Collectors.counting()
+                        ));
+                        
+                Map<String, Long> environmentStats = allNotes.stream()
+                        .filter(note -> note.getSpec() != null && note.getSpec().getEnvironment() != null && !note.getSpec().getEnvironment().isEmpty())
+                        .collect(Collectors.groupingBy(
+                                note -> note.getSpec().getEnvironment(),
+                                Collectors.counting()
+                        ));
+                        
+                Map<String, Long> locationStats = allNotes.stream()
+                        .filter(note -> note.getSpec() != null && note.getSpec().getLocation() != null && !note.getSpec().getLocation().isEmpty())
+                        .map(note -> {
+                            String location = note.getSpec().getLocation();
+                            String[] parts = location.split("：");
+                            if (parts.length >= 2) {
+                                return parts[0] + "：" + parts[1];
+                            }
+                            return location;
+                        })
+                        .collect(Collectors.groupingBy(
+                                loc -> loc,
+                                Collectors.counting()
+                        ));
+                        
                 List<StatisticsDTO.MonthlyStat> monthlyStats = generateMonthlyStats(allNotes);
                 
                 List<StatisticsDTO.DailyStat> recentDaysStats = generateRecentDaysStats(allNotes, 14);
@@ -356,6 +392,10 @@ public class EchoServiceImpl implements EchoService {
                         .thisWeekNotes(thisWeekNotes)
                         .thisMonthNotes(thisMonthNotes)
                         .categoryStats(categoryStats)
+                        .moodStats(moodStats)
+                        .weatherStats(weatherStats)
+                        .environmentStats(environmentStats)
+                        .locationStats(locationStats)
                         .monthlyStats(monthlyStats)
                         .recentDaysStats(recentDaysStats)
                         .earliestDate(earliestDate)

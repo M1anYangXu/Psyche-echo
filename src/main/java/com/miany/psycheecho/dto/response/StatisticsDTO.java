@@ -24,6 +24,14 @@ public class StatisticsDTO {
 
     private Map<String, Long> categoryStats;
 
+    private Map<String, Long> moodStats;
+
+    private Map<String, Long> weatherStats;
+
+    private Map<String, Long> environmentStats;
+
+    private Map<String, Long> locationStats;
+
     private List<MonthlyStat> monthlyStats;
 
     private List<DailyStat> recentDaysStats;
