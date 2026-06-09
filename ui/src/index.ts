@@ -2,8 +2,6 @@ import { definePlugin } from '@halo-dev/ui-shared'
 import { IconEye } from '@halo-dev/components'
 import { markRaw } from 'vue'
 
-import 'remixicon/fonts/remixicon.css'
-
 export default definePlugin({
   components: {},
   routes: [
