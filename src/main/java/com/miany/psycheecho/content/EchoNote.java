@@ -25,8 +25,6 @@ public class EchoNote extends AbstractExtension {
     
     @Data
     public static class EchoNoteSpec {
-        private String author;
-        private String avatar;
         private String content;
         private List<Media> medias;
         private String categoryName;

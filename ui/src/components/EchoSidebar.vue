@@ -133,6 +133,10 @@ onUnmounted(() => {
   overflow-y: hidden;
   overflow-x: hidden;
   border: 1px solid rgba(102, 126, 234, 0.1);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .sidebar-header {
@@ -190,6 +194,12 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .category-item-wrapper {
@@ -198,18 +208,20 @@ onUnmounted(() => {
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  border-left-width: 3px;
 
   &:hover {
     background-color: #fafafa;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.08);
-    transform: translateX(2px);
+    border-color: rgba(102, 126, 234, 0.1);
   }
 
   &.active {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    border-left: 3px solid #667eea;
+    border-color: rgba(102, 126, 234, 0.3);
+    border-left-color: #667eea;
   }
 }
 

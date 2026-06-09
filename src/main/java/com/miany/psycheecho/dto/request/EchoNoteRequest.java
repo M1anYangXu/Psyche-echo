@@ -14,11 +14,6 @@ import java.util.List;
 @AllArgsConstructor
 public class EchoNoteRequest {
 
-    @NotBlank(message = "作者不能为空")
-    private String author;
-
-    private String avatar;
-
     @NotBlank(message = "内容不能为空")
     private String content;
 

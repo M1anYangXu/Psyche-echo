@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { echoApiClient } from '@/api/echo'
-import type { EchoItem, Category, Statistics } from '@/types'
+import type { EchoItem, Category, Statistics, ExportData, ImportResult } from '@/types'
 
 const categories = ref<Category[]>([])
 const allEchoList = ref<EchoItem[]>([])
@@ -140,8 +140,109 @@ export function useEcho() {
     }
   }
 
+  const exportData = async (exportMode: 'all' | 'current'): Promise<string> => {
+    const [allCategories, allNotes] = await Promise.all([
+      echoApiClient.categories.list(),
+      echoApiClient.notes.list()
+    ])
+
+    let notesToExport = allNotes
+    if (exportMode === 'current') {
+      notesToExport = allNotes.filter(note => note.spec.categoryName === selectedCategory.value)
+    }
+
+    const exportData: ExportData = {
+      version: '1.0',
+      exportTime: new Date().toISOString(),
+      categories: allCategories,
+      notes: notesToExport
+    }
+
+    return JSON.stringify(exportData, null, 2)
+  }
+
+  const importData = async (jsonString: string): Promise<ImportResult> => {
+    try {
+      const data: ExportData = JSON.parse(jsonString)
+
+      if (data.version !== '1.0') {
+        return {
+          success: false,
+          message: '不支持的导出格式版本',
+          importedCategories: 0,
+          importedNotes: 0,
+          skippedNotes: 0
+        }
+      }
+
+      let importedCategories = 0
+      let importedNotes = 0
+      let skippedNotes = 0
+
+      const existingCategories = await echoApiClient.categories.list()
+      const existingCategoryNames = new Set(existingCategories.map(c => c.metadata.name))
+
+      for (const category of data.categories) {
+        if (!existingCategoryNames.has(category.metadata.name)) {
+          try {
+            await echoApiClient.categories.create({ spec: category.spec })
+            importedCategories++
+          } catch {
+            console.warn(`创建分类失败: ${category.spec.name}`)
+          }
+        }
+      }
+
+      for (const note of data.notes) {
+        try {
+          const payload = {
+            spec: {
+              content: note.spec.content,
+              categoryName: note.spec.categoryName || '默认',
+              medias: note.spec.medias,
+              weatherDay: note.spec.weatherDay,
+              weatherNight: note.spec.weatherNight,
+              mood: note.spec.mood,
+              location: note.spec.location,
+              adcode: note.spec.adcode,
+              environment: note.spec.environment
+            },
+            status: {
+              categoryId: note.status?.categoryId || note.spec.categoryName || '默认',
+              time: '刚刚',
+              visitCount: 0
+            }
+          }
+          await echoApiClient.notes.create(payload)
+          importedNotes++
+        } catch {
+          skippedNotes++
+        }
+      }
+
+      await loadEchoes()
+
+      return {
+        success: true,
+        message: `导入完成！新增 ${importedCategories} 个分类，${importedNotes} 篇日记，跳过 ${skippedNotes} 篇重复日记`,
+        importedCategories,
+        importedNotes,
+        skippedNotes
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: '导入失败：无效的JSON格式',
+        importedCategories: 0,
+        importedNotes: 0,
+        skippedNotes: 0
+      }
+    }
+  }
+
   return {
     categories,
+    allEchoList,
     filteredEchoList,
     selectedCategory,
     isLoading,
@@ -156,5 +257,7 @@ export function useEcho() {
     addCategory,
     updateCategory,
     removeCategory,
+    exportData,
+    importData,
   }
 }

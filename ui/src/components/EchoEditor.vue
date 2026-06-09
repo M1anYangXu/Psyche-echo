@@ -66,30 +66,15 @@ const fetchWeather = async (adcode: string) => {
   try {
     const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=1560db1cdb6f71f169d02454758d2e40&city=${adcode}&extensions=all`)
     const data = await response.json()
-    console.log('=== 完整天气返回 ===')
-    console.log('完整数据:', JSON.stringify(data, null, 2))
-    console.log('status:', data.status)
-    console.log('info:', data.info)
-    console.log('infocode:', data.infocode)
-    console.log('count:', data.count)
-    if (data.lives) {
-      console.log('lives数据:', data.lives)
-    }
-    if (data.forecasts) {
-      console.log('forecasts数据:', data.forecasts)
-    }
-    console.log('====================')
-    
+
     if (data.status === '1' && data.forecasts && data.forecasts.length > 0 && data.forecasts[0].casts && data.forecasts[0].casts.length > 0) {
       const forecast = data.forecasts[0].casts[0]
-      console.log('使用预报天气 - 白天:', forecast.dayweather, ', 晚上:', forecast.nightweather)
       weatherDay.value = forecast.dayweather
       weatherNight.value = forecast.nightweather
       emit('update:weatherDay', forecast.dayweather)
       emit('update:weatherNight', forecast.nightweather)
     } else if (data.status === '1' && data.lives && data.lives.length > 0) {
       const weatherData = data.lives[0]
-      console.log('使用实时天气（无预报数据） - 天气:', weatherData.weather)
       weatherDay.value = weatherData.weather
       weatherNight.value = weatherData.weather
       emit('update:weatherDay', weatherData.weather)
@@ -133,7 +118,6 @@ const fetchCityFromIP = async () => {
   try {
     const response = await fetch('https://restapi.amap.com/v3/ip?key=1560db1cdb6f71f169d02454758d2e40')
     const data = await response.json()
-    console.log('高德定位返回:', data)
     if (data.status === '1') {
       currentAdcode.value = data.adcode || ''
       emit('update:adcode', currentAdcode.value)
@@ -161,7 +145,6 @@ const fetchCityFromIP = async () => {
 
 const getLocationByGPS = () => {
   if (!navigator.geolocation) {
-    console.warn('浏览器不支持定位，将使用IP定位')
     fetchCityFromIP()
     return
   }
@@ -171,12 +154,10 @@ const getLocationByGPS = () => {
       const { latitude, longitude } = position.coords
       const success = await fetchCityFromCoords(latitude, longitude)
       if (!success) {
-        console.warn('GPS定位成功，但获取城市信息失败')
         fetchCityFromIP()
       }
     },
-    (error) => {
-      console.warn('GPS定位失败，将使用IP定位:', error)
+    () => {
       fetchCityFromIP()
     },
     {

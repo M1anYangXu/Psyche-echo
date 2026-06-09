@@ -6,14 +6,11 @@ import com.miany.psycheecho.dto.response.StatisticsDTO;
 import com.miany.psycheecho.service.EchoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import run.halo.app.core.extension.User;
 import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.ListOptions;
 
@@ -156,55 +153,17 @@ public class EchoServiceImpl implements EchoService {
             echo.getStatus().setCategoryId("默认");
         }
 
-        return getContextUser()
-            .doOnNext(user -> {
-                if (echo.getSpec().getAuthor() == null || echo.getSpec().getAuthor().isEmpty()) {
-                    echo.getSpec().setAuthor(user.getSpec().getDisplayName());
-                }
-                if (echo.getSpec().getAvatar() == null || echo.getSpec().getAvatar().isEmpty()) {
-                    var avatar = user.getSpec().getAvatar();
-                    echo.getSpec().setAvatar(avatar != null ? avatar : "");
-                }
-            })
-            .then(Mono.fromRunnable(() -> {
+        return Mono.fromRunnable(() -> {
                 extensionClient.create(echo);
                 
                 String categoryId = echo.getStatus().getCategoryId();
                 if (categoryId != null && !categoryId.equals("1") && !categoryId.equals("全部")) {
                     updateCategoryCount(categoryId, 1);
                 }
-            }))
+            })
             .thenReturn(echo);
     }
     
-    private Mono<User> getContextUser() {
-        return ReactiveSecurityContextHolder.getContext()
-            .map(SecurityContext::getAuthentication)
-            .map(auth -> {
-                Object principal = auth.getPrincipal();
-                if (principal instanceof User) {
-                    return (User) principal;
-                }
-                var user = new User();
-                var spec = new User.UserSpec();
-                spec.setDisplayName("Administrator");
-                user.setSpec(spec);
-                return user;
-            })
-            .onErrorReturn(createDefaultUser());
-    }
-    
-    private User createDefaultUser() {
-        var user = new User();
-        var metadata = new run.halo.app.extension.Metadata();
-        metadata.setName("admin");
-        user.setMetadata(metadata);
-        var spec = new User.UserSpec();
-        spec.setDisplayName("Administrator");
-        user.setSpec(spec);
-        return user;
-    }
-
     @Override
     public Mono<EchoNote> updateEcho(String name, EchoNote echo) {
         var existingOpt = extensionClient.fetch(EchoNote.class, name);

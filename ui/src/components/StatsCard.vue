@@ -59,7 +59,7 @@ const getWeatherEmoji = (weather: string) => {
 }
 
 const getEnvironmentEmoji = (env: string) => {
-  return environmentEmojis[env.toLowerCase()] || '📍'
+  return environmentEmojis[env.toLowerCase()] || '🏠'
 }
 
 const statCards = computed(() => [
@@ -110,6 +110,17 @@ const formatMonth = (month: string) => {
 const formatDay = (date: string) => {
   const [, month, day] = date.split('-')
   return `${parseInt(month)}/${parseInt(day)}`
+}
+
+const maxDailyCount = computed(() => {
+  return Math.max(...props.statistics.recentDaysStats.map(d => d.count), 1)
+})
+
+const getDailyBarHeight = (count: number) => {
+  if (count === 0) return 5
+  const max = maxDailyCount.value
+  const height = (count / max) * 100
+  return Math.max(height, 10)
 }
 </script>
 
@@ -195,12 +206,7 @@ const formatDay = (date: string) => {
             <div class="daily-bar-wrapper">
               <div
                 class="daily-bar"
-                :class="{
-                  'bar-0': day.count === 0,
-                  'bar-1': day.count === 1,
-                  'bar-2': day.count === 2,
-                  'bar-3': day.count >= 3
-                }"
+                :style="{ height: `${getDailyBarHeight(day.count)}%` }"
               />
               <span class="daily-tooltip">{{ day.count }} 条</span>
             </div>
@@ -526,22 +532,6 @@ const formatDay = (date: string) => {
   transition: height 0.3s ease;
   min-height: 4px;
   align-self: flex-end;
-}
-
-.daily-bar.bar-0 {
-  height: 5%;
-}
-
-.daily-bar.bar-1 {
-  height: 35%;
-}
-
-.daily-bar.bar-2 {
-  height: 70%;
-}
-
-.daily-bar.bar-3 {
-  height: 100%;
 }
 
 .daily-label {

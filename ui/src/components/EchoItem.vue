@@ -2,20 +2,22 @@
 import { ref, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import EchoEditor from './EchoEditor.vue'
-import type { EchoItem } from '@/types'
+import type { EchoItem, Category } from '@/types'
 
 const props = defineProps<{
   echo: EchoItem
+  categories: Category[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', echo: EchoItem): void
-  (e: 'delete', echo: EchoItem): void
+  (e: 'edit'): void
+  (e: 'delete'): void
   (e: 'save', echo: EchoItem): void
-  (e: 'cancel', echo: EchoItem): void
+  (e: 'cancel'): void
   (e: 'preview', url: string): void
   (e: 'open-attachment'): void
   (e: 'update-medias', medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>): void
+  (e: 'move-category', categoryName: string): void
 }>()
 
 const editContent = ref(props.echo.spec.content)
@@ -26,6 +28,22 @@ const editMood = ref(props.echo.spec.mood || '')
 const editLocation = ref(props.echo.spec.location || '')
 const editEnvironment = ref(props.echo.spec.environment || '')
 const showDropdown = ref(false)
+const showMoveCategory = ref(false)
+
+watch(() => props.echo, (newEcho) => {
+  editContent.value = newEcho.spec.content
+  editMedias.value = [...(newEcho.spec.medias || [])]
+  editWeatherDay.value = newEcho.spec.weatherDay || ''
+  editWeatherNight.value = newEcho.spec.weatherNight || ''
+  editMood.value = newEcho.spec.mood || ''
+  editLocation.value = newEcho.spec.location || ''
+  editEnvironment.value = newEcho.spec.environment || ''
+}, { deep: true })
+
+// 可移动的分类（排除当前分类）
+const availableCategories = computed(() => {
+  return props.categories.filter(cat => cat.spec.name !== props.echo.spec.categoryName)
+})
 
 const weatherIcons: Record<string, string> = {
   '晴': '☀️',
@@ -120,11 +138,20 @@ watch(() => props.echo.spec.environment, (newEnv) => {
 
 const startEdit = () => {
   showDropdown.value = false
-  emit('edit', props.echo)
+  emit('edit')
 }
 const deleteEcho = () => {
   showDropdown.value = false
-  emit('delete', props.echo)
+  emit('delete')
+}
+const moveCategory = (categoryName: string) => {
+  showDropdown.value = false
+  showMoveCategory.value = false
+  emit('move-category', categoryName)
+}
+const toggleMoveCategory = (e: Event) => {
+  e.stopPropagation()
+  showMoveCategory.value = !showMoveCategory.value
 }
 const handleUpdateMedias = (newMedias: Array<{ url: string; type: string; cover?: string; displayName?: string }>) => {
   editMedias.value = [...newMedias]
@@ -167,7 +194,7 @@ const saveEdit = () => {
   }
   emit('save', updatedEcho)
 }
-const cancelEdit = () => emit('cancel', props.echo)
+const cancelEdit = () => emit('cancel')
 const previewImage = (url: string) => emit('preview', url)
 const toggleDropdown = (e: Event) => {
   e.stopPropagation()
@@ -222,15 +249,34 @@ const getDateInfo = () => {
           <Icon icon="ri:edit-2-line" :size="16" />
           <span class="btn-text">编辑</span>
         </button>
-        <div v-if="showDropdown" class="dropdown-menu">
-          <button class="dropdown-item" @click.stop="startEdit">
-            <Icon icon="ri:edit-2-line" :size="14" />
-            编辑
-          </button>
-          <button class="dropdown-item danger" @click.stop="deleteEcho">
-            <Icon icon="ri:delete-bin-line" :size="14" />
-            删除
-          </button>
+        <div v-if="showDropdown" class="dropdown-wrapper">
+          <div v-if="showMoveCategory" class="category-menu">
+            <button
+              v-for="cat in availableCategories"
+              :key="cat.metadata.name"
+              class="category-item"
+              @click.stop="moveCategory(cat.spec.name)"
+            >
+              {{ cat.spec.name }}
+            </button>
+            <div v-if="availableCategories.length === 0" class="no-categories">
+              暂无其他分类
+            </div>
+          </div>
+          <div class="dropdown-menu">
+            <button class="dropdown-item" @click.stop="startEdit">
+              <Icon icon="ri:edit-2-line" :size="14" />
+              编辑
+            </button>
+            <button class="dropdown-item" @click.stop="toggleMoveCategory">
+              <Icon icon="ri:folder-transfer-line" :size="14" />
+              {{ showMoveCategory ? '收起' : '移动' }}
+            </button>
+            <button class="dropdown-item danger" @click.stop="deleteEcho">
+              <Icon icon="ri:delete-bin-line" :size="14" />
+              删除
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -406,16 +452,41 @@ const getDateInfo = () => {
   display: inline-block;
 }
 
-.dropdown-menu {
+.dropdown-wrapper {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
+  display: flex;
+  gap: 8px;
+  z-index: 9999;
+}
+
+.category-menu {
+  min-width: 100px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  border: 1px solid #f1f5f9;
+  max-height: 150px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 2px;
+  }
+}
+
+.dropdown-menu {
   min-width: 110px;
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   padding: 6px;
-  z-index: 9999;
   border: 1px solid #f1f5f9;
 }
 
@@ -445,6 +516,31 @@ const getDateInfo = () => {
       background-color: #fef2f2;
     }
   }
+}
+
+.category-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #475569;
+  text-align: left;
+  transition: all 0.15s;
+
+  &:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+  }
+}
+
+.no-categories {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .card-body {

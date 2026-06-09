@@ -18,8 +18,6 @@ export interface EchoItem {
     version?: string
   }
   spec: {
-    author: string
-    avatar: string
     content: string
     categoryName?: string
     medias?: Array<{
@@ -81,4 +79,19 @@ export interface MonthlyStat {
 export interface DailyStat {
   date: string
   count: number
+}
+
+export interface ExportData {
+  version: string
+  exportTime: string
+  categories: Category[]
+  notes: EchoItem[]
+}
+
+export interface ImportResult {
+  success: boolean
+  message: string
+  importedCategories: number
+  importedNotes: number
+  skippedNotes: number
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import EchoItem from './EchoItem.vue'
-import type { EchoItem as EchoItemType } from '@/types'
+import type { EchoItem as EchoItemType, Category } from '@/types'
 
 const props = defineProps<{
   echoes: EchoItemType[]
   isLoading: boolean
+  categories: Category[]
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +17,7 @@ const emit = defineEmits<{
   (e: 'preview', url: string): void
   (e: 'open-attachment'): void
   (e: 'update-medias', echo: EchoItemType, medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>): void
+  (e: 'move-category', echo: EchoItemType, categoryName: string): void
 }>()
 
 const MAX_DISPLAY = 10
@@ -27,6 +29,30 @@ const displayedEchoes = computed(() => {
 const hasMore = computed(() => {
   return props.echoes.length > MAX_DISPLAY
 })
+
+const handleEdit = (echo: EchoItemType) => {
+  emit('edit', echo)
+}
+
+const handleDelete = (echo: EchoItemType) => {
+  emit('delete', echo)
+}
+
+const handleSave = (echo: EchoItemType) => {
+  emit('save', echo)
+}
+
+const handleCancel = (echo: EchoItemType) => {
+  emit('cancel', echo)
+}
+
+const handleMoveCategory = (echo: EchoItemType, categoryName: string) => {
+  emit('move-category', echo, categoryName)
+}
+
+const handleUpdateMedias = (echo: EchoItemType, medias: Array<{ url: string; type: string; cover?: string; displayName?: string }>) => {
+  emit('update-medias', echo, medias)
+}
 </script>
 
 <template>
@@ -36,13 +62,15 @@ const hasMore = computed(() => {
         v-for="echo in displayedEchoes"
         :key="echo.metadata.name"
         :echo="echo"
-        @edit="emit('edit', $event)"
-        @delete="emit('delete', $event)"
+        :categories="categories"
+        @edit="handleEdit(echo)"
+        @delete="handleDelete(echo)"
         @save="emit('save', $event)"
-        @cancel="emit('cancel', $event)"
+        @cancel="handleCancel(echo)"
         @preview="emit('preview', $event)"
         @open-attachment="emit('open-attachment')"
-        @update-medias="emit('update-medias', echo, $event)"
+        @update-medias="handleUpdateMedias(echo, $event)"
+        @move-category="handleMoveCategory(echo, $event)"
       />
       <div v-if="hasMore" class="more-hint">
         <p>仅显示前{{ MAX_DISPLAY }}条，共{{ echoes.length }}条</p>

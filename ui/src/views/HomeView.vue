@@ -12,11 +12,13 @@ import StatsCard from '@/components/StatsCard.vue'
 import NewCategoryModal from '@/components/NewCategoryModal.vue'
 import ImagePreviewModal from '@/components/ImagePreviewModal.vue'
 import IconSelectorModal from '@/components/IconSelectorModal.vue'
+import ImportExportModal from '@/components/ImportExportModal.vue'
 import { useEcho } from '@/composables/useEcho'
 import type { EchoItem, Category } from '@/types'
 
 const {
   categories,
+  allEchoList,
   filteredEchoList,
   selectedCategory,
   isLoading,
@@ -29,7 +31,12 @@ const {
   addCategory,
   updateCategory,
   removeCategory,
+  exportData,
+  importData,
 } = useEcho()
+
+// Import/Export
+const importExportModal = ref(false)
 
 // Stats Page
 const showStats = ref(true)
@@ -144,6 +151,19 @@ const deleteCategory = (name: string) => {
     return
   }
 
+  // 检查该分类下是否有日记
+  const notesInCategory = allEchoList.value.filter(note => note.spec.categoryName === name)
+  if (notesInCategory.length > 0) {
+    Dialog.warning({
+      title: '无法删除该分类',
+      description: `该分类下有 ${notesInCategory.length} 篇日记，请先移动或删除这些日记后再删除分类`,
+      confirmType: 'primary',
+      confirmText: '知道了',
+      cancelText: '',
+    })
+    return
+  }
+
   Dialog.warning({
     title: '确定要删除该分类吗？',
     description: '该操作不可逆',
@@ -223,8 +243,6 @@ const publishEcho = async () => {
   try {
     await addEcho({
       spec: {
-        author: 'Administrator',
-        avatar: '',
         content: newEcho.content,
         categoryName: selectedCategory.value,
         medias: selectedMedias.value.map(m => ({
@@ -295,6 +313,26 @@ const saveEdit = async (echo: EchoItem) => {
   }
 }
 
+const handleMoveCategory = async (echo: EchoItem, categoryName: string) => {
+  try {
+    const updatedEcho = {
+      ...echo,
+      spec: {
+        ...echo.spec,
+        categoryName: categoryName,
+      },
+      status: {
+        ...echo.status,
+        categoryId: categoryName,
+      }
+    }
+    await updateEcho(echo.metadata.name, updatedEcho)
+    Toast.success(`已移动到「${categoryName}」分类`)
+  } catch {
+    Toast.error('移动失败')
+  }
+}
+
 // Image Preview
 const previewImageModal = ref(false)
 const previewImageUrl = ref('')
@@ -302,6 +340,33 @@ const previewImageUrl = ref('')
 const openPreviewImage = (url: string) => {
   previewImageUrl.value = url
   previewImageModal.value = true
+}
+
+// Import/Export Handlers
+const handleExport = async (mode: 'all' | 'current') => {
+  try {
+    const data = await exportData(mode)
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `echo-backup-${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    Toast.success('导出成功')
+  } catch {
+    Toast.error('导出失败')
+  }
+}
+
+const handleImport = async (data: string) => {
+  const result = await importData(data)
+  if (result.success) {
+    Toast.success(result.message)
+    await loadEchoes()
+  } else {
+    Toast.error(result.message)
+  }
 }
 
 onMounted(() => {
@@ -321,6 +386,14 @@ onMounted(() => {
       @edit-category="openEditCategoryModal"
       @delete-category="deleteCategory"
     />
+
+    <button class="import-export-btn" @click="importExportModal = true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" x2="12" y1="3" y2="15"></line>
+      </svg>
+    </button>
 
     <main class="echo-content">
       <template v-if="showStats">
@@ -361,12 +434,14 @@ onMounted(() => {
       <EchoList
         :echoes="filteredEchoList"
         :is-loading="isLoading"
+        :categories="categories"
         @edit="startEdit"
         @delete="deleteEcho"
         @save="saveEdit"
         @cancel="cancelEdit"
         @preview="openPreviewImage"
         @open-attachment="handleOpenAttachment"
+        @move-category="handleMoveCategory"
       />
       </template>
     </main>
@@ -405,6 +480,13 @@ onMounted(() => {
       :accepts="['image/*']"
       @select="onAttachmentsSelect"
     />
+
+    <ImportExportModal
+      v-model:visible="importExportModal"
+      :selected-category="selectedCategory"
+      @export="handleExport"
+      @import="handleImport"
+    />
   </div>
 </template>
 
@@ -416,6 +498,35 @@ onMounted(() => {
   background-color: #f3f4f6;
   height: 100vh;
   box-sizing: border-box;
+  position: relative;
+}
+
+.import-export-btn {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .echo-content {
