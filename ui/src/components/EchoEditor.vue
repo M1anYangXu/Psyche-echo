@@ -197,7 +197,7 @@ const selectedMoodLabel = computed(() => {
 
 const selectedEnvironmentLabel = computed(() => {
   const option = environmentOptions.find(e => e.value === props.environment)
-  return option ? option.label : '📍 场景'
+  return option ? option.label : '🏠 场景'
 })
 
 const selectMood = (value: string) => {
@@ -491,11 +491,12 @@ const closeDropdowns = () => {
 }
 
 .location-badge {
-  padding: 6px 12px;
-  border-radius: 16px;
-  background-color: rgba(59, 130, 246, 0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   color: #3b82f6;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
