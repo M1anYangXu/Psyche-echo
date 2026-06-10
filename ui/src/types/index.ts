@@ -36,6 +36,7 @@ export interface EchoItem {
   status: {
     categoryId: string
     time: string
+    creationTimestamp?: string
     visitCount?: number
   }
   editing?: boolean

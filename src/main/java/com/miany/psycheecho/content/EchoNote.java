@@ -49,5 +49,6 @@ public class EchoNote extends AbstractExtension {
         private String time;
         private Long visitCount;
         private String categoryId;
+        private String creationTimestamp;
     }
 }

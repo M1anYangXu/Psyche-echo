@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import EchoEditor from './EchoEditor.vue'
 import type { EchoItem, Category } from '@/types'
@@ -29,6 +29,7 @@ const editLocation = ref(props.echo.spec.location || '')
 const editEnvironment = ref(props.echo.spec.environment || '')
 const showDropdown = ref(false)
 const showMoveCategory = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
 
 watch(() => props.echo, (newEcho) => {
   editContent.value = newEcho.spec.content
@@ -201,9 +202,32 @@ const toggleDropdown = (e: Event) => {
   showDropdown.value = !showDropdown.value
 }
 
+const handleClickOutside = (e: Event) => {
+  const target = e.target as Node
+  if (dropdownRef.value && !dropdownRef.value.contains(target)) {
+    showDropdown.value = false
+    showMoveCategory.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
 const getWeekDay = () => {
-  if (props.echo.metadata?.creationTimestamp) {
-    const date = new Date(props.echo.metadata.creationTimestamp)
+  let date: Date | null = null
+
+  if (props.echo.status?.creationTimestamp) {
+    date = new Date(props.echo.status.creationTimestamp)
+  } else if (props.echo.metadata?.creationTimestamp) {
+    date = new Date(props.echo.metadata.creationTimestamp)
+  }
+
+  if (date) {
     const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
     return weekDays[date.getDay()]
   }
@@ -211,8 +235,15 @@ const getWeekDay = () => {
 }
 
 const getDateInfo = () => {
-  if (props.echo.metadata?.creationTimestamp) {
-    const date = new Date(props.echo.metadata.creationTimestamp)
+  let date: Date | null = null
+
+  if (props.echo.status?.creationTimestamp) {
+    date = new Date(props.echo.status.creationTimestamp)
+  } else if (props.echo.metadata?.creationTimestamp) {
+    date = new Date(props.echo.metadata.creationTimestamp)
+  }
+
+  if (date) {
     const month = date.getMonth() + 1
     const day = date.getDate()
     const hours = date.getHours().toString().padStart(2, '0')
@@ -249,7 +280,7 @@ const getDateInfo = () => {
           <Icon icon="ri:edit-2-line" :size="16" />
           <span class="btn-text">编辑</span>
         </button>
-        <div v-if="showDropdown" class="dropdown-wrapper">
+        <div v-if="showDropdown" class="dropdown-wrapper" ref="dropdownRef">
           <div v-if="showMoveCategory" class="category-menu">
             <button
               v-for="cat in availableCategories"

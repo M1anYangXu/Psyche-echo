@@ -77,14 +77,15 @@ export const echoApiClient = {
       return response.data
     },
 
-    create: async (note: Omit<EchoItem, 'metadata' | 'status'>): Promise<EchoItem> => {
+    create: async (note: Omit<EchoItem, 'metadata'>): Promise<EchoItem> => {
       const payload = {
         apiVersion: API_VERSION,
         kind: 'EchoNote',
         metadata: {
           generateName: 'echo-note-'
         },
-        spec: note.spec
+        spec: note.spec,
+        status: note.status
       }
       const response = await echoNoteApiClient.post(`/apis/${API_VERSION}/echonotes`, payload)
       return response.data

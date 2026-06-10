@@ -6,12 +6,12 @@ import type { ImportResult } from '@/types'
 const props = defineProps<{
   visible: boolean
   selectedCategory: string
+  onExport?: (mode: 'all' | 'current') => Promise<{ success: boolean; message: string }>
+  onImport?: (data: string) => Promise<ImportResult>
 }>()
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'export', mode: 'all' | 'current'): void
-  (e: 'import', data: string): void
 }>()
 
 const activeTab = ref<'export' | 'import'>('export')
@@ -19,6 +19,7 @@ const exportMode = ref<'all' | 'current'>('all')
 const importFile = ref<File | null>(null)
 const importText = ref('')
 const isProcessing = ref(false)
+const isClosing = ref(false)
 const importResult = ref<ImportResult | null>(null)
 
 watch(() => props.visible, (val) => {
@@ -33,12 +34,20 @@ watch(() => props.visible, (val) => {
 })
 
 const handleClose = () => {
-  emit('update:visible', false)
+  isClosing.value = true
+  setTimeout(() => {
+    emit('update:visible', false)
+    isClosing.value = false
+  }, 300)
 }
 
-const handleExport = () => {
-  emit('export', exportMode.value)
-  handleClose()
+const handleExport = async () => {
+  if (props.onExport) {
+    const result = await props.onExport(exportMode.value)
+    if (result && result.success) {
+      handleClose()
+    }
+  }
 }
 
 const handleFileSelect = (event: Event) => {
@@ -67,13 +76,41 @@ const handleImport = async () => {
   }
 
   isProcessing.value = true
-  emit('import', importText.value)
+  
+  try {
+    if (props.onImport) {
+      const result = await props.onImport(importText.value)
+      
+      isProcessing.value = false
+      
+      if (result && result.success) {
+        handleClose()
+      } else {
+        importResult.value = {
+          success: false,
+          message: result?.message || '导入失败',
+          importedCategories: 0,
+          importedNotes: 0,
+          skippedNotes: 0
+        }
+      }
+    }
+  } catch (error) {
+    isProcessing.value = false
+    importResult.value = {
+      success: false,
+      message: '导入失败：' + (error as Error).message,
+      importedCategories: 0,
+      importedNotes: 0,
+      skippedNotes: 0
+    }
+  }
 }
 </script>
 
 <template>
-  <div v-if="visible" class="modal-overlay" @click.self="handleClose">
-    <div class="modal-content">
+  <div v-if="visible" class="modal-overlay" :class="{ closing: isClosing }" @click.self="handleClose">
+    <div class="modal-content" :class="{ closing: isClosing }">
       <div class="modal-header">
         <h3 class="modal-title">
           <Icon icon="ri:database-fill" :size="20" />
@@ -187,6 +224,12 @@ const handleImport = async () => {
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  transition: opacity 0.3s ease;
+
+  &.closing {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .modal-content {
@@ -196,6 +239,13 @@ const handleImport = async () => {
   border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  transition: all 0.3s ease;
+  transform-origin: center;
+
+  &.closing {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 
 .modal-header {

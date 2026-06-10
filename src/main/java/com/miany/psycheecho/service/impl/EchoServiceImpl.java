@@ -14,6 +14,7 @@ import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.ListOptions;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -143,8 +144,18 @@ public class EchoServiceImpl implements EchoService {
         if (echo.getStatus() == null) {
             echo.setStatus(new EchoNote.EchoNoteStatus());
         }
-        echo.getStatus().setTime("刚刚");
-        echo.getStatus().setVisitCount(0L);
+        
+        if (echo.getStatus().getTime() == null || echo.getStatus().getTime().isEmpty()) {
+            echo.getStatus().setTime("刚刚");
+        }
+        
+        if (echo.getStatus().getVisitCount() == null) {
+            echo.getStatus().setVisitCount(0L);
+        }
+        
+        if (echo.getStatus().getCreationTimestamp() == null || echo.getStatus().getCreationTimestamp().isEmpty()) {
+            echo.getStatus().setCreationTimestamp(java.time.Instant.now().toString());
+        }
 
         if (echo.getSpec().getCategoryName() == null) {
             echo.getSpec().setCategoryName("默认");
@@ -365,47 +376,53 @@ public class EchoServiceImpl implements EchoService {
     }
 
     private boolean isSameDay(EchoNote note, LocalDate date) {
-        if (note.getMetadata().getCreationTimestamp() == null) {
+        LocalDateTime timestamp = getNoteTimestamp(note);
+        if (timestamp == null) {
             return false;
         }
+        return timestamp.toLocalDate().equals(date);
+    }
+    
+    private LocalDateTime getNoteTimestamp(EchoNote note) {
         try {
-            LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
-            return timestamp.toLocalDate().equals(date);
+            String timestampStr = null;
+            
+            if (note.getStatus() != null && note.getStatus().getCreationTimestamp() != null && !note.getStatus().getCreationTimestamp().isEmpty()) {
+                timestampStr = note.getStatus().getCreationTimestamp();
+            } else if (note.getMetadata().getCreationTimestamp() != null) {
+                timestampStr = note.getMetadata().getCreationTimestamp().toString();
+            }
+            
+            if (timestampStr != null) {
+                return Instant.parse(timestampStr)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
+            }
         } catch (Exception e) {
-            return false;
+            // ignore
         }
+        return null;
     }
 
     private boolean isInDateRange(EchoNote note, LocalDate start, LocalDate end) {
-        if (note.getMetadata().getCreationTimestamp() == null) {
+        LocalDateTime timestamp = getNoteTimestamp(note);
+        if (timestamp == null) {
             return false;
         }
-        try {
-            LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
-            LocalDate noteDate = timestamp.toLocalDate();
-            return !noteDate.isBefore(start) && !noteDate.isAfter(end);
-        } catch (Exception e) {
-            return false;
-        }
+        LocalDate noteDate = timestamp.toLocalDate();
+        return !noteDate.isBefore(start) && !noteDate.isAfter(end);
     }
 
     private List<StatisticsDTO.MonthlyStat> generateMonthlyStats(List<EchoNote> notes) {
         Map<String, Long> monthlyCounts = notes.stream()
-                .filter(note -> note.getMetadata().getCreationTimestamp() != null)
+                .filter(note -> getNoteTimestamp(note) != null)
                 .collect(Collectors.groupingBy(
                         note -> {
-                            try {
-                                LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDateTime();
-                                return timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-                            } catch (Exception e) {
+                            LocalDateTime timestamp = getNoteTimestamp(note);
+                            if (timestamp == null) {
                                 return "unknown";
                             }
+                            return timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM"));
                         },
                         Collectors.counting()
                 ));
@@ -423,17 +440,14 @@ public class EchoServiceImpl implements EchoService {
     private List<StatisticsDTO.DailyStat> generateRecentDaysStats(List<EchoNote> notes, int days) {
         LocalDate today = LocalDate.now();
         Map<String, Long> dailyCounts = notes.stream()
-                .filter(note -> note.getMetadata().getCreationTimestamp() != null)
+                .filter(note -> getNoteTimestamp(note) != null)
                 .collect(Collectors.groupingBy(
                         note -> {
-                            try {
-                                LocalDateTime timestamp = note.getMetadata().getCreationTimestamp()
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDateTime();
-                                return timestamp.toLocalDate().toString();
-                            } catch (Exception e) {
+                            LocalDateTime timestamp = getNoteTimestamp(note);
+                            if (timestamp == null) {
                                 return "unknown";
                             }
+                            return timestamp.toLocalDate().toString();
                         },
                         Collectors.counting()
                 ));

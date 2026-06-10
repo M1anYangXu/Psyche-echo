@@ -159,7 +159,7 @@ const deleteCategory = (name: string) => {
       description: `该分类下有 ${notesInCategory.length} 篇日记，请先移动或删除这些日记后再删除分类`,
       confirmType: 'primary',
       confirmText: '知道了',
-      cancelText: '',
+      showCancel: false,
     })
     return
   }
@@ -171,6 +171,7 @@ const deleteCategory = (name: string) => {
     onConfirm: async () => {
       try {
         await removeCategory(name)
+        showStats.value = false
         Toast.success('删除成功')
       } catch {
         Toast.error('删除失败')
@@ -285,6 +286,8 @@ const deleteEcho = (echo: EchoItem) => {
     onConfirm: async () => {
       try {
         await removeEcho(echo.metadata.name)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        await loadEchoes()
         Toast.success('删除成功')
       } catch {
         Toast.error('删除失败')
@@ -354,8 +357,10 @@ const handleExport = async (mode: 'all' | 'current') => {
     a.click()
     URL.revokeObjectURL(url)
     Toast.success('导出成功')
+    return { success: true, message: '导出成功' }
   } catch {
     Toast.error('导出失败')
+    return { success: false, message: '导出失败' }
   }
 }
 
@@ -367,6 +372,7 @@ const handleImport = async (data: string) => {
   } else {
     Toast.error(result.message)
   }
+  return result
 }
 
 onMounted(() => {
@@ -484,8 +490,8 @@ onMounted(() => {
     <ImportExportModal
       v-model:visible="importExportModal"
       :selected-category="selectedCategory"
-      @export="handleExport"
-      @import="handleImport"
+      :on-export="handleExport"
+      :on-import="handleImport"
     />
   </div>
 </template>

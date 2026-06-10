@@ -48,7 +48,14 @@ export function useEcho() {
     isLoading.value = true
     try {
       const data = await echoApiClient.notes.list()
-      allEchoList.value = [...data]
+      const processedData = data.map(note => ({
+        ...note,
+        status: {
+          ...note.status,
+          creationTimestamp: note.status?.creationTimestamp || note.metadata?.creationTimestamp
+        }
+      }))
+      allEchoList.value = [...processedData]
       await loadCategories()
       await loadStatistics()
     } catch (error) {
@@ -130,7 +137,7 @@ export function useEcho() {
     try {
       await echoApiClient.categories.delete(name)
       if (selectedCategory.value === name) {
-        selectedCategory.value = '全部'
+        selectedCategory.value = '默认'
       }
       await new Promise(resolve => setTimeout(resolve, 500))
       await loadEchoes()
@@ -151,11 +158,19 @@ export function useEcho() {
       notesToExport = allNotes.filter(note => note.spec.categoryName === selectedCategory.value)
     }
 
+    const notesWithTimestamp = notesToExport.map(note => ({
+      ...note,
+      status: {
+        ...note.status,
+        creationTimestamp: note.status?.creationTimestamp || note.metadata?.creationTimestamp
+      }
+    }))
+
     const exportData: ExportData = {
       version: '1.0',
       exportTime: new Date().toISOString(),
       categories: allCategories,
-      notes: notesToExport
+      notes: notesWithTimestamp
     }
 
     return JSON.stringify(exportData, null, 2)
@@ -195,7 +210,22 @@ export function useEcho() {
 
       for (const note of data.notes) {
         try {
+          const originalTimestamp = note.status?.creationTimestamp || note.metadata?.creationTimestamp
+
+          const existingNote = allEchoList.value.find(n =>
+            n.spec.content === note.spec.content &&
+            (n.status?.creationTimestamp === originalTimestamp || n.metadata?.creationTimestamp === originalTimestamp)
+          )
+
+          if (existingNote) {
+            skippedNotes++
+            continue
+          }
+
           const payload = {
+            metadata: {
+              generateName: 'echo-note-'
+            },
             spec: {
               content: note.spec.content,
               categoryName: note.spec.categoryName || '默认',
@@ -209,8 +239,9 @@ export function useEcho() {
             },
             status: {
               categoryId: note.status?.categoryId || note.spec.categoryName || '默认',
-              time: '刚刚',
-              visitCount: 0
+              time: note.status?.time || '刚刚',
+              visitCount: note.status?.visitCount || 0,
+              creationTimestamp: originalTimestamp
             }
           }
           await echoApiClient.notes.create(payload)
