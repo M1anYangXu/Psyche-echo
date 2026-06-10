@@ -140,6 +140,7 @@ export function useEcho() {
         selectedCategory.value = '默认'
       }
       await new Promise(resolve => setTimeout(resolve, 500))
+      await loadCategories()
       await loadEchoes()
     } catch (error: any) {
       console.error('Failed to delete category:', error?.response?.data || error)
