@@ -13,6 +13,8 @@ const emit = defineEmits<{
   (e: 'select-category', name: string): void
   (e: 'toggle-stats'): void
   (e: 'open-new-category'): void
+  (e: 'edit-category', category: EchoCategory): void
+  (e: 'delete-category', name: string): void
   (e: 'reorder-categories', categories: EchoCategory[]): void
 }>()
 
@@ -20,8 +22,31 @@ const getCategoryIcon = (icon: string): string => {
   return icon || 'ri:folder-fill'
 }
 
+const activeDropdown = ref<string | null>(null)
 const draggingIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
+
+const toggleDropdown = (name: string, event: Event) => {
+  event.stopPropagation()
+  activeDropdown.value = activeDropdown.value === name ? null : name
+}
+
+const handleEdit = (category: EchoCategory) => {
+  emit('edit-category', category)
+  activeDropdown.value = null
+}
+
+const handleDelete = (name: string) => {
+  emit('delete-category', name)
+  activeDropdown.value = null
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.category-actions')) {
+    activeDropdown.value = null
+  }
+}
 
 const handleDragStart = (index: number, event: DragEvent) => {
   draggingIndex.value = index
@@ -68,9 +93,13 @@ const handleDragEnd = () => {
   dragOverIndex.value = null
 }
 
-onMounted(() => {})
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
 
-onUnmounted(() => {})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -123,6 +152,29 @@ onUnmounted(() => {})
           <span class="category-count">{{ category.spec.count }}</span>
         </button>
 
+        <div v-if="category.metadata.name !== '默认'" class="category-actions">
+          <button
+            class="action-btn"
+            @click="toggleDropdown(category.metadata.name, $event)"
+            :class="{ active: activeDropdown === category.metadata.name }"
+          >
+            <Icon icon="ri:more-fill" :size="22" />
+          </button>
+
+          <div
+            v-if="activeDropdown === category.metadata.name"
+            class="dropdown-menu"
+          >
+            <button class="dropdown-item" @click.stop="handleEdit(category)">
+              <Icon icon="ri:edit-2-fill" :size="16" />
+              编辑
+            </button>
+            <button class="dropdown-item delete" @click.stop="handleDelete(category.metadata.name)">
+              <Icon icon="ri:delete-bin-2-fill" :size="16" />
+              删除
+            </button>
+          </div>
+        </div>
 
       </div>
     </nav>
@@ -269,13 +321,13 @@ onUnmounted(() => {})
   display: flex !important;
   align-items: center;
   justify-content: center;
-  padding: 0 12px 0 8px;
+  padding: 0 4px 0 6px;
   color: #94a3b8 !important;
   opacity: 1 !important;
   transition: color 0.2s;
   cursor: grab;
   pointer-events: auto;
-  width: 40px;
+  width: 32px;
 
   &:hover {
     color: #64748b;
@@ -285,8 +337,8 @@ onUnmounted(() => {})
     display: block !important;
     opacity: 1 !important;
     color: inherit;
-    width: 20px !important;
-    height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 }
 
@@ -316,6 +368,78 @@ onUnmounted(() => {})
     color: #64748b;
     font-size: 12px;
     font-weight: 600;
+  }
+}
+
+.category-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.2s;
+    font-size: 18px;
+
+    &:hover {
+      background-color: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+    }
+
+    &.active {
+      background-color: rgba(102, 126, 234, 0.15);
+      color: #667eea;
+    }
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    z-index: 100;
+    min-width: 120px;
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 14px;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+      }
+
+      &.delete {
+        &:hover {
+          background-color: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+        }
+      }
+    }
   }
 }
 

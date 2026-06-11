@@ -53,16 +53,35 @@ const handleSelectCategory = (name: string) => {
 
 // Category Management
 const newCategoryModal = ref(false)
+const editCategoryModal = ref(false)
 const newCategoryIcon = ref('')
+const editCategoryIcon = ref('')
 const iconSelectorModal = ref(false)
+const editingCategory = ref<EchoCategory | null>(null)
 
 const openNewCategoryModal = () => {
   newCategoryIcon.value = ''
   newCategoryModal.value = true
 }
 
+const openEditCategoryModal = (category: EchoCategory) => {
+  editingCategory.value = category
+  editCategoryIcon.value = category.spec.icon
+  editCategoryModal.value = true
+}
+
+const closeEditCategoryModal = () => {
+  editingCategory.value = null
+  editCategoryIcon.value = ''
+  editCategoryModal.value = false
+}
+
 const onIconSelect = (iconName: string) => {
-  newCategoryIcon.value = iconName
+  if (editingCategory.value) {
+    editCategoryIcon.value = iconName
+  } else {
+    newCategoryIcon.value = iconName
+  }
   iconSelectorModal.value = false
 }
 
@@ -92,6 +111,75 @@ const createCategory = async (category: { name: string; icon: string }) => {
   }
 }
 
+const saveCategory = async (category: { name: string; icon: string }) => {
+  if (!editingCategory.value) return
+
+  if (editingCategory.value.metadata.name === '默认') {
+    Toast.error('默认分类不能修改')
+    closeEditCategoryModal()
+    return
+  }
+
+  if (category.name === '默认') {
+    Toast.error('不能将分类命名为"默认"')
+    return
+  }
+
+  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '默认' && cat.metadata.name !== editingCategory.value!.metadata.name).map(cat => cat.metadata.name)
+  if (categoryNames.includes(category.name)) {
+    Toast.error('分类名称已存在')
+    return
+  }
+
+  try {
+    await updateCategory(editingCategory.value!.metadata.name, {
+      spec: {
+        name: category.name,
+        icon: category.icon,
+        count: editingCategory.value!.spec.count,
+      },
+    })
+    closeEditCategoryModal()
+    Toast.success('分类更新成功')
+  } catch {
+    Toast.error('更新失败')
+  }
+}
+
+const deleteCategory = (name: string) => {
+  if (name === '默认') {
+    Toast.error('默认分类不能删除')
+    return
+  }
+
+  // 检查该分类下是否有日记
+  const notesInCategory = allEchoList.value.filter(note => note.spec.categoryName === name)
+  if (notesInCategory.length > 0) {
+    Dialog.warning({
+      title: '无法删除该分类',
+      description: `该分类下有 ${notesInCategory.length} 篇日记，请先移动或删除这些日记后再删除分类`,
+      confirmType: 'primary',
+      confirmText: '知道了',
+      showCancel: false,
+    })
+    return
+  }
+
+  Dialog.warning({
+    title: '确定要删除该分类吗？',
+    description: '该操作不可逆',
+    confirmType: 'danger',
+    onConfirm: async () => {
+      try {
+        await removeCategory(name)
+        showStats.value = false
+        Toast.success('删除成功')
+      } catch {
+        Toast.error('删除失败')
+      }
+    },
+  })
+}
 
 
 // Echo Publishing
@@ -363,6 +451,8 @@ onMounted(() => {
       @select-category="handleSelectCategory"
       @toggle-stats="toggleStats"
       @open-new-category="openNewCategoryModal"
+      @edit-category="openEditCategoryModal"
+      @delete-category="deleteCategory"
       @reorder-categories="handleReorderCategories"
     />
 
@@ -440,7 +530,15 @@ onMounted(() => {
       @open-icon-selector="iconSelectorModal = true"
     />
 
-
+    <NewCategoryModal
+      v-model:visible="editCategoryModal"
+      :icon="editCategoryIcon"
+      :title="'编辑分类'"
+      :default-name="editingCategory?.spec.name || ''"
+      @confirm="saveCategory"
+      @open-icon-selector="iconSelectorModal = true"
+      @cancel="closeEditCategoryModal"
+    />
 
     <IconSelectorModal
       v-model:visible="iconSelectorModal"
