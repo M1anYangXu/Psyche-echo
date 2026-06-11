@@ -40,7 +40,7 @@ public class EchoServiceImpl implements EchoService {
         }
         
         return Flux.fromIterable(categories)
-                .sort(Comparator.comparing(c -> c.getMetadata().getName()));
+                .sort(Comparator.comparing(c -> c.getSpec().getOrder() != null ? c.getSpec().getOrder() : Integer.MAX_VALUE));
     }
 
     @Override
@@ -89,6 +89,9 @@ public class EchoServiceImpl implements EchoService {
         }
         if (category.getSpec().getCount() != null) {
             existing.getSpec().setCount(category.getSpec().getCount());
+        }
+        if (category.getSpec().getOrder() != null) {
+            existing.getSpec().setOrder(category.getSpec().getOrder());
         }
         extensionClient.update(existing);
         return Mono.just(existing);
@@ -236,7 +239,8 @@ public class EchoServiceImpl implements EchoService {
                 new String[]{"旅行", "motion"}
         );
 
-        for (String[] cat : defaultCategories) {
+        for (int i = 0; i < defaultCategories.size(); i++) {
+            String[] cat = defaultCategories.get(i);
             String name = cat[0];
             var existing = extensionClient.fetch(EchoCategory.class, name);
             if (existing.isEmpty()) {
@@ -248,6 +252,7 @@ public class EchoServiceImpl implements EchoService {
                 spec.setName(name);
                 spec.setIcon(cat[1]);
                 spec.setCount(0);
+                spec.setOrder(i);
                 category.setSpec(spec);
                 extensionClient.create(category);
                 log.info("创建默认分类: {}", name);

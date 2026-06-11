@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { Category as EchoCategory } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   categories: EchoCategory[]
   selectedCategory: string
   showStats: boolean
@@ -13,45 +13,64 @@ const emit = defineEmits<{
   (e: 'select-category', name: string): void
   (e: 'toggle-stats'): void
   (e: 'open-new-category'): void
-  (e: 'edit-category', category: EchoCategory): void
-  (e: 'delete-category', name: string): void
+  (e: 'reorder-categories', categories: EchoCategory[]): void
 }>()
 
 const getCategoryIcon = (icon: string): string => {
   return icon || 'ri:folder-fill'
 }
 
-const activeDropdown = ref<string | null>(null)
+const draggingIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
-const toggleDropdown = (name: string, event: Event) => {
-  event.stopPropagation()
-  activeDropdown.value = activeDropdown.value === name ? null : name
-}
-
-const handleEdit = (category: EchoCategory) => {
-  emit('edit-category', category)
-  activeDropdown.value = null
-}
-
-const handleDelete = (name: string) => {
-  emit('delete-category', name)
-  activeDropdown.value = null
-}
-
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (!target.closest('.category-actions')) {
-    activeDropdown.value = null
+const handleDragStart = (index: number, event: DragEvent) => {
+  draggingIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
   }
 }
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+const handleDragOver = (index: number, event: DragEvent) => {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  if (draggingIndex.value !== index) {
+    dragOverIndex.value = index
+  }
+}
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+const handleDragLeave = () => {
+  dragOverIndex.value = null
+}
+
+const handleDrop = (index: number, event: DragEvent) => {
+  event.preventDefault()
+  if (draggingIndex.value === null || draggingIndex.value === index) {
+    draggingIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+
+  const newCategories = [...props.categories]
+  const [draggedItem] = newCategories.splice(draggingIndex.value, 1)
+  newCategories.splice(index, 0, draggedItem)
+
+  emit('reorder-categories', newCategories)
+
+  draggingIndex.value = null
+  dragOverIndex.value = null
+}
+
+const handleDragEnd = () => {
+  draggingIndex.value = null
+  dragOverIndex.value = null
+}
+
+onMounted(() => {})
+
+onUnmounted(() => {})
 </script>
 
 <template>
@@ -73,10 +92,28 @@ onUnmounted(() => {
 
     <nav class="category-list">
       <div
-        v-for="category in categories"
+        v-for="(category, index) in categories"
         :key="category.metadata.name"
-        :class="['category-item-wrapper', { active: selectedCategory === category.metadata.name }]"
+        :class="[
+          'category-item-wrapper',
+          {
+            active: selectedCategory === category.metadata.name,
+            dragging: draggingIndex === index,
+            'drag-over': dragOverIndex === index,
+            'drag-over-top': dragOverIndex === index && draggingIndex !== null && draggingIndex < index,
+            'drag-over-bottom': dragOverIndex === index && draggingIndex !== null && draggingIndex > index
+          }
+        ]"
+        :draggable="category.metadata.name !== '默认'"
+        @dragstart="handleDragStart(index, $event)"
+        @dragover="handleDragOver(index, $event)"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop(index, $event)"
+        @dragend="handleDragEnd"
       >
+        <div class="drag-handle" v-if="category.metadata.name !== '默认'">
+          <Icon icon="ri:drag-move-line" :size="20" />
+        </div>
         <button
           class="category-item"
           @click="emit('select-category', category.metadata.name)"
@@ -86,29 +123,7 @@ onUnmounted(() => {
           <span class="category-count">{{ category.spec.count }}</span>
         </button>
 
-        <div v-if="category.metadata.name !== '默认'" class="category-actions">
-          <button
-            class="action-btn"
-            @click="toggleDropdown(category.metadata.name, $event)"
-            :class="{ active: activeDropdown === category.metadata.name }"
-          >
-            <Icon icon="ri:more-fill" :size="20" />
-          </button>
 
-          <div
-            v-if="activeDropdown === category.metadata.name"
-            class="dropdown-menu"
-          >
-            <button class="dropdown-item" @click.stop="handleEdit(category)">
-              <Icon icon="ri:edit-2-fill" :size="16" />
-              编辑
-            </button>
-            <button class="dropdown-item delete" @click.stop="handleDelete(category.metadata.name)">
-              <Icon icon="ri:delete-bin-2-fill" :size="16" />
-              删除
-            </button>
-          </div>
-        </div>
       </div>
     </nav>
 
@@ -211,6 +226,7 @@ onUnmounted(() => {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   border-left-width: 3px;
+  cursor: grab;
 
   &:hover {
     background-color: #fafafa;
@@ -222,6 +238,55 @@ onUnmounted(() => {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
     border-color: rgba(102, 126, 234, 0.3);
     border-left-color: #667eea;
+  }
+
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  }
+
+  &.drag-over {
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  }
+
+  &.drag-over-top {
+    border-top: 2px solid #667eea;
+  }
+
+  &.drag-over-bottom {
+    border-bottom: 2px solid #667eea;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.drag-handle {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px 0 8px;
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+  transition: color 0.2s;
+  cursor: grab;
+  pointer-events: auto;
+  width: 40px;
+
+  &:hover {
+    color: #64748b;
+  }
+
+  svg {
+    display: block !important;
+    opacity: 1 !important;
+    color: inherit;
+    width: 20px !important;
+    height: 20px !important;
   }
 }
 

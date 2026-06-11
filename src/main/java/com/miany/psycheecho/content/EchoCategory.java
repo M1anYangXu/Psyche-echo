@@ -25,5 +25,6 @@ public class EchoCategory extends AbstractExtension {
         private String name;
         private String icon;
         private Integer count;
+        private Integer order;
     }
 }

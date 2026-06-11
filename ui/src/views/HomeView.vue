@@ -14,7 +14,7 @@ import ImagePreviewModal from '@/components/ImagePreviewModal.vue'
 import IconSelectorModal from '@/components/IconSelectorModal.vue'
 import ImportExportModal from '@/components/ImportExportModal.vue'
 import { useEcho } from '@/composables/useEcho'
-import type { EchoItem, Category } from '@/types'
+import type { EchoItem, Category as EchoCategory } from '@/types'
 
 const {
   categories,
@@ -23,6 +23,7 @@ const {
   selectedCategory,
   isLoading,
   statistics,
+  loadCategories,
   loadEchoes,
   selectCategory,
   addEcho,
@@ -52,35 +53,16 @@ const handleSelectCategory = (name: string) => {
 
 // Category Management
 const newCategoryModal = ref(false)
-const editCategoryModal = ref(false)
 const newCategoryIcon = ref('')
-const editCategoryIcon = ref('')
 const iconSelectorModal = ref(false)
-const editingCategory = ref<Category | null>(null)
 
 const openNewCategoryModal = () => {
   newCategoryIcon.value = ''
   newCategoryModal.value = true
 }
 
-const openEditCategoryModal = (category: Category) => {
-  editingCategory.value = category
-  editCategoryIcon.value = category.spec.icon
-  editCategoryModal.value = true
-}
-
-const closeEditCategoryModal = () => {
-  editingCategory.value = null
-  editCategoryIcon.value = ''
-  editCategoryModal.value = false
-}
-
 const onIconSelect = (iconName: string) => {
-  if (editingCategory.value) {
-    editCategoryIcon.value = iconName
-  } else {
-    newCategoryIcon.value = iconName
-  }
+  newCategoryIcon.value = iconName
   iconSelectorModal.value = false
 }
 
@@ -110,75 +92,7 @@ const createCategory = async (category: { name: string; icon: string }) => {
   }
 }
 
-const saveCategory = async (category: { name: string; icon: string }) => {
-  if (!editingCategory.value) return
 
-  if (editingCategory.value.metadata.name === '默认') {
-    Toast.error('默认分类不能修改')
-    closeEditCategoryModal()
-    return
-  }
-
-  if (category.name === '默认') {
-    Toast.error('不能将分类命名为"默认"')
-    return
-  }
-
-  const categoryNames = categories.value.filter(cat => cat.metadata.name !== '默认' && cat.metadata.name !== editingCategory.value!.metadata.name).map(cat => cat.metadata.name)
-  if (categoryNames.includes(category.name)) {
-    Toast.error('分类名称已存在')
-    return
-  }
-
-  try {
-    await updateCategory(editingCategory.value!.metadata.name, {
-      spec: {
-        name: category.name,
-        icon: category.icon,
-        count: editingCategory.value!.spec.count,
-      },
-    })
-    closeEditCategoryModal()
-    Toast.success('分类更新成功')
-  } catch {
-    Toast.error('更新失败')
-  }
-}
-
-const deleteCategory = (name: string) => {
-  if (name === '默认') {
-    Toast.error('默认分类不能删除')
-    return
-  }
-
-  // 检查该分类下是否有日记
-  const notesInCategory = allEchoList.value.filter(note => note.spec.categoryName === name)
-  if (notesInCategory.length > 0) {
-    Dialog.warning({
-      title: '无法删除该分类',
-      description: `该分类下有 ${notesInCategory.length} 篇日记，请先移动或删除这些日记后再删除分类`,
-      confirmType: 'primary',
-      confirmText: '知道了',
-      showCancel: false,
-    })
-    return
-  }
-
-  Dialog.warning({
-    title: '确定要删除该分类吗？',
-    description: '该操作不可逆',
-    confirmType: 'danger',
-    onConfirm: async () => {
-      try {
-        await removeCategory(name)
-        showStats.value = false
-        Toast.success('删除成功')
-      } catch {
-        Toast.error('删除失败')
-      }
-    },
-  })
-}
 
 // Echo Publishing
 const newEcho = reactive({
@@ -345,6 +259,66 @@ const openPreviewImage = (url: string) => {
   previewImageModal.value = true
 }
 
+// Category Reorder Handler
+const handleReorderCategories = async (newCategories: EchoCategory[]) => {
+  try {
+    const API_VERSION = 'echo.miany.run/v1alpha1'
+    let orderIndex = 0
+    for (const category of newCategories) {
+      if (category.metadata.name === '默认') {
+        continue
+      }
+      const encodedName = encodeURIComponent(category.metadata.name)
+
+      const getResponse = await fetch(`/apis/${API_VERSION}/echocategories/${encodedName}`, {
+        credentials: 'include',
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+      })
+      if (!getResponse.ok) {
+        console.error('获取分类失败:', getResponse.status)
+        continue
+      }
+      const latestCategory = await getResponse.json()
+
+      const payload = {
+        apiVersion: API_VERSION,
+        kind: 'EchoCategory',
+        metadata: {
+          name: category.metadata.name,
+          version: latestCategory.metadata?.version
+        },
+        spec: {
+          ...latestCategory.spec,
+          order: orderIndex
+        }
+      }
+
+      const putResponse = await fetch(`/apis/${API_VERSION}/echocategories/${encodedName}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify(payload)
+      })
+      if (!putResponse.ok) {
+        const errorText = await putResponse.text()
+        console.error('更新分类失败:', putResponse.status, errorText)
+        continue
+      }
+      orderIndex++
+    }
+    await loadCategories()
+    Toast.success('排序已更新')
+  } catch (error) {
+    console.error('排序更新失败:', error)
+    Toast.error('排序更新失败')
+  }
+}
+
 // Import/Export Handlers
 const handleExport = async (mode: 'all' | 'current') => {
   try {
@@ -389,8 +363,7 @@ onMounted(() => {
       @select-category="handleSelectCategory"
       @toggle-stats="toggleStats"
       @open-new-category="openNewCategoryModal"
-      @edit-category="openEditCategoryModal"
-      @delete-category="deleteCategory"
+      @reorder-categories="handleReorderCategories"
     />
 
     <button class="import-export-btn" @click="importExportModal = true">
@@ -414,6 +387,9 @@ onMounted(() => {
             :medias="selectedMedias"
             :mood="newEcho.mood"
             :environment="newEcho.environment"
+            :weatherDay="newEcho.weatherDay"
+            :weatherNight="newEcho.weatherNight"
+            :location="newEcho.location"
             @update:medias="handleUpdateMedias"
             @update:weatherDay="newEcho.weatherDay = $event"
             @update:weatherNight="newEcho.weatherNight = $event"
@@ -464,15 +440,7 @@ onMounted(() => {
       @open-icon-selector="iconSelectorModal = true"
     />
 
-    <NewCategoryModal
-      v-model:visible="editCategoryModal"
-      :icon="editCategoryIcon"
-      :title="'编辑分类'"
-      :default-name="editingCategory?.spec.name || ''"
-      @confirm="saveCategory"
-      @open-icon-selector="iconSelectorModal = true"
-      @cancel="closeEditCategoryModal"
-    />
+
 
     <IconSelectorModal
       v-model:visible="iconSelectorModal"

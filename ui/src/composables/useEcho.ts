@@ -21,7 +21,7 @@ export function useEcho() {
     isLoading.value = true
     try {
       const data = await echoApiClient.categories.list()
-      const defaultCategory = data.find(cat => cat.metadata.name === '默认')
+      const defaultCategory = data.find((cat: Category) => cat.metadata.name === '默认')
       const otherCategories = data.filter(cat => cat.metadata.name !== '默认')
 
       categories.value = [
@@ -29,7 +29,7 @@ export function useEcho() {
           metadata: { name: '默认' },
           spec: { name: '默认', icon: 'ri:folder-fill', count: allEchoList.value.filter(d => d.spec.categoryName === '默认').length }
         },
-        ...otherCategories.map(cat => ({
+        ...otherCategories.sort((a, b) => (a.spec.order ?? 0) - (b.spec.order ?? 0)).map(cat => ({
           ...cat,
           spec: {
             ...cat.spec,

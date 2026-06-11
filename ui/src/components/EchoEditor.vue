@@ -29,61 +29,12 @@ const emit = defineEmits<{
   (e: 'update:weatherNight', value: string): void
   (e: 'update:mood', value: string): void
   (e: 'update:location', value: string): void
-  (e: 'update:adcode', value: string): void
   (e: 'update:environment', value: string): void
 }>()
 
 const currentCity = ref('')
-const currentAdcode = ref('')
 const weatherDay = ref('')
 const weatherNight = ref('')
-
-const weatherEmojis: Record<string, string> = {
-  '晴': '☀️',
-  '多云': '☁️',
-  '阴': '🌥️',
-  '小雨': '🌧️',
-  '中雨': '🌧️',
-  '大雨': '⛈️',
-  '暴雨': '⛈️',
-  '雷阵雨': '⛈️',
-  '小雪': '❄️',
-  '中雪': '❄️',
-  '大雪': '🌨️',
-  '暴雪': '🌨️',
-  '雨夹雪': '🌨️',
-  '雾': '🌫️',
-  '霾': '🌫️',
-  '风': '🌬️',
-  '大风': '🌬️',
-}
-
-const getWeatherEmoji = (weather: string) => {
-  return weatherEmojis[weather] || '🌤️'
-}
-
-const fetchWeather = async (adcode: string) => {
-  try {
-    const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=1560db1cdb6f71f169d02454758d2e40&city=${adcode}&extensions=all`)
-    const data = await response.json()
-
-    if (data.status === '1' && data.forecasts && data.forecasts.length > 0 && data.forecasts[0].casts && data.forecasts[0].casts.length > 0) {
-      const forecast = data.forecasts[0].casts[0]
-      weatherDay.value = forecast.dayweather
-      weatherNight.value = forecast.nightweather
-      emit('update:weatherDay', forecast.dayweather)
-      emit('update:weatherNight', forecast.nightweather)
-    } else if (data.status === '1' && data.lives && data.lives.length > 0) {
-      const weatherData = data.lives[0]
-      weatherDay.value = weatherData.weather
-      weatherNight.value = weatherData.weather
-      emit('update:weatherDay', weatherData.weather)
-      emit('update:weatherNight', weatherData.weather)
-    }
-  } catch (e) {
-    console.error('获取天气失败:', e)
-  }
-}
 
 const fetchCityFromCoords = async (lat: number, lng: number) => {
   try {
@@ -91,8 +42,6 @@ const fetchCityFromCoords = async (lat: number, lng: number) => {
     const data = await response.json()
     if (data.status === '1' && data.regeocode) {
       const addressComponent = data.regeocode.addressComponent
-      currentAdcode.value = addressComponent.adcode || ''
-      emit('update:adcode', currentAdcode.value)
       if (addressComponent.province && addressComponent.city && addressComponent.district) {
         currentCity.value = `${addressComponent.province}：${addressComponent.city}：${addressComponent.district}`
       } else if (addressComponent.province && addressComponent.city) {
@@ -103,9 +52,6 @@ const fetchCityFromCoords = async (lat: number, lng: number) => {
         currentCity.value = addressComponent.province
       }
       emit('update:location', currentCity.value)
-      if (currentAdcode.value) {
-        fetchWeather(currentAdcode.value)
-      }
       return true
     }
   } catch (e) {
@@ -119,8 +65,6 @@ const fetchCityFromIP = async () => {
     const response = await fetch('https://restapi.amap.com/v3/ip?key=1560db1cdb6f71f169d02454758d2e40')
     const data = await response.json()
     if (data.status === '1') {
-      currentAdcode.value = data.adcode || ''
-      emit('update:adcode', currentAdcode.value)
       if (data.city && data.province) {
         currentCity.value = `${data.province}：${data.city}`
       } else if (data.city) {
@@ -131,9 +75,6 @@ const fetchCityFromIP = async () => {
         currentCity.value = '未知城市'
       }
       emit('update:location', currentCity.value)
-      if (currentAdcode.value) {
-        fetchWeather(currentAdcode.value)
-      }
     } else {
       currentCity.value = '未知城市'
     }
@@ -173,6 +114,28 @@ const localMedias = ref<Array<{ url: string; type: string; cover?: string; displ
 const emojiSelectorModal = ref(false)
 const showMoodDropdown = ref(false)
 const showEnvironmentDropdown = ref(false)
+const showWeatherDropdown = ref(false)
+const showWeatherNightDropdown = ref(false)
+
+const weatherOptions = [
+  { value: '晴', label: '☀️ 晴' },
+  { value: '多云', label: '☁️ 多云' },
+  { value: '阴', label: '🌥️ 阴' },
+  { value: '小雨', label: '🌧️ 小雨' },
+  { value: '中雨', label: '🌧️ 中雨' },
+  { value: '大雨', label: '⛈️ 大雨' },
+  { value: '暴雨', label: '⛈️ 暴雨' },
+  { value: '雷阵雨', label: '⛈️ 雷阵雨' },
+  { value: '小雪', label: '❄️ 小雪' },
+  { value: '中雪', label: '❄️ 中雪' },
+  { value: '大雪', label: '🌨️ 大雪' },
+  { value: '暴雪', label: '🌨️ 暴雪' },
+  { value: '雨夹雪', label: '🌨️ 雨夹雪' },
+  { value: '雾', label: '🌫️ 雾' },
+  { value: '霾', label: '🌫️ 霾' },
+  { value: '风', label: '🌬️ 风' },
+  { value: '大风', label: '🌬️ 大风' },
+]
 
 const moodOptions = [
   { value: 'happy', label: '😊 开心' },
@@ -190,6 +153,16 @@ const environmentOptions = [
   { value: 'outdoor', label: '🌳 户外' },
 ]
 
+const selectedWeatherDayLabel = computed(() => {
+  const option = weatherOptions.find(w => w.value === weatherDay.value)
+  return option ? option.label : '🌤️ 天气'
+})
+
+const selectedWeatherNightLabel = computed(() => {
+  const option = weatherOptions.find(w => w.value === weatherNight.value)
+  return option ? option.label : '🌙 夜间'
+})
+
 const selectedMoodLabel = computed(() => {
   const option = moodOptions.find(m => m.value === props.mood)
   return option ? option.label : '💭 心情'
@@ -199,6 +172,28 @@ const selectedEnvironmentLabel = computed(() => {
   const option = environmentOptions.find(e => e.value === props.environment)
   return option ? option.label : '🏠 场景'
 })
+
+const selectWeatherDay = (value: string) => {
+  if (weatherDay.value === value) {
+    weatherDay.value = ''
+    emit('update:weatherDay', '')
+  } else {
+    weatherDay.value = value
+    emit('update:weatherDay', value)
+  }
+  showWeatherDropdown.value = false
+}
+
+const selectWeatherNight = (value: string) => {
+  if (weatherNight.value === value) {
+    weatherNight.value = ''
+    emit('update:weatherNight', '')
+  } else {
+    weatherNight.value = value
+    emit('update:weatherNight', value)
+  }
+  showWeatherNightDropdown.value = false
+}
 
 const selectMood = (value: string) => {
   emit('update:mood', value === props.mood ? '' : value)
@@ -239,9 +234,10 @@ onMounted(() => {
     },
   })
 
+  weatherDay.value = props.weatherDay || ''
+  weatherNight.value = props.weatherNight || ''
+
   if (props.editing) {
-    weatherDay.value = props.weatherDay || ''
-    weatherNight.value = props.weatherNight || ''
     currentCity.value = props.location || ''
   } else {
     getLocationByGPS()
@@ -267,9 +263,32 @@ watch(
   { immediate: true, deep: true }
 )
 
+watch(
+  () => props.weatherDay,
+  (newWeather) => {
+    weatherDay.value = newWeather || ''
+  }
+)
+
+watch(
+  () => props.weatherNight,
+  (newWeather) => {
+    weatherNight.value = newWeather || ''
+  }
+)
+
+watch(
+  () => props.location,
+  (newLocation) => {
+    currentCity.value = newLocation || ''
+  }
+)
+
 const closeDropdowns = () => {
   showMoodDropdown.value = false
   showEnvironmentDropdown.value = false
+  showWeatherDropdown.value = false
+  showWeatherNightDropdown.value = false
 }
 </script>
 
@@ -300,19 +319,46 @@ const closeDropdowns = () => {
           <span class="emoji-icon">😊</span>
         </div>
         <div class="divider"></div>
-        <div v-if="weatherDay && weatherNight" class="weather-display">
-          <span class="weather-emoji">{{ getWeatherEmoji(weatherDay) }}</span>
-          <span class="weather-text">{{ weatherDay }}</span>
-          <span class="weather-arrow">→</span>
-          <span class="weather-emoji">{{ getWeatherEmoji(weatherNight) }}</span>
-          <span class="weather-text">{{ weatherNight }}</span>
+        <div
+          class="selector-group"
+          @click.stop="showWeatherDropdown = !showWeatherDropdown; closeDropdowns(); showWeatherDropdown = true"
+        >
+          <span>{{ selectedWeatherDayLabel }}</span>
+          <span class="dropdown-arrow">▼</span>
+          <div v-if="showWeatherDropdown" class="dropdown-menu">
+            <button
+              v-for="weather in weatherOptions"
+              :key="weather.value"
+              class="dropdown-item"
+              :class="{ active: weather.value === weatherDay }"
+              @click.stop="selectWeatherDay(weather.value)"
+            >
+              {{ weather.label }}
+            </button>
+          </div>
         </div>
-        <div v-else class="weather-loading">
-          <span>🌤️ 加载天气...</span>
+        <div
+          v-if="weatherDay"
+          class="selector-group night-selector"
+          @click.stop="showWeatherNightDropdown = !showWeatherNightDropdown; closeDropdowns(); showWeatherNightDropdown = true"
+        >
+          <span>{{ selectedWeatherNightLabel }}</span>
+          <span class="dropdown-arrow">▼</span>
+          <div v-if="showWeatherNightDropdown" class="dropdown-menu">
+            <button
+              v-for="weather in weatherOptions"
+              :key="weather.value"
+              class="dropdown-item"
+              :class="{ active: weather.value === weatherNight }"
+              @click.stop="selectWeatherNight(weather.value)"
+            >
+              {{ weather.label }}
+            </button>
+          </div>
         </div>
         <div
           class="selector-group"
-          @click.stop="showMoodDropdown = !showMoodDropdown; showEnvironmentDropdown = false"
+          @click.stop="showMoodDropdown = !showMoodDropdown; closeDropdowns(); showMoodDropdown = true"
         >
           <span>{{ selectedMoodLabel }}</span>
           <span class="dropdown-arrow">▼</span>
@@ -330,7 +376,7 @@ const closeDropdowns = () => {
         </div>
         <div
           class="selector-group"
-          @click.stop="showEnvironmentDropdown = !showEnvironmentDropdown; showMoodDropdown = false"
+          @click.stop="showEnvironmentDropdown = !showEnvironmentDropdown; closeDropdowns(); showEnvironmentDropdown = true"
         >
           <span>{{ selectedEnvironmentLabel }}</span>
           <span class="dropdown-arrow">▼</span>
@@ -519,40 +565,6 @@ const closeDropdowns = () => {
   }
 }
 
-.weather-display {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(8, 145, 178, 0.15) 100%);
-  border: 1px solid rgba(6, 182, 212, 0.2);
-}
-
-.weather-emoji {
-  font-size: 16px;
-}
-
-.weather-text {
-  font-size: 13px;
-  color: #0891b2;
-  font-weight: 500;
-}
-
-.weather-arrow {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 2px;
-}
-
-.weather-loading {
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(148, 163, 184, 0.1);
-  font-size: 13px;
-  color: #94a3b8;
-}
-
 .footer-left {
   display: flex;
   gap: 0.5rem;
@@ -616,6 +628,19 @@ const closeDropdowns = () => {
     font-size: 14px;
     color: #667eea;
     font-weight: 500;
+  }
+}
+
+.night-selector {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+  }
+
+  span {
+    color: #667eea;
   }
 }
 
