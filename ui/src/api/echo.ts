@@ -92,7 +92,6 @@ export const echoApiClient = {
     },
 
     update: async (name: string, echo: EchoItem): Promise<EchoItem> => {
-      // 先获取最新数据，确保有正确的 version
       const latestecho = await echoApiClient.notes.get(name)
       const payload = {
         apiVersion: API_VERSION,
@@ -101,7 +100,11 @@ export const echoApiClient = {
           name: name,
           version: latestecho.metadata?.version
         },
-        spec: echo.spec
+        spec: echo.spec,
+        status: {
+          ...latestecho.status,
+          ...echo.status
+        }
       }
       const response = await echoNoteApiClient.put(`/apis/${API_VERSION}/echonotes/${name}`, payload)
       return response.data
