@@ -155,8 +155,11 @@ export function useEcho() {
     ])
 
     let notesToExport = allNotes
+    let categoriesToExport = allCategories
+
     if (exportMode === 'current') {
       notesToExport = allNotes.filter(note => note.spec.categoryName === selectedCategory.value)
+      categoriesToExport = allCategories.filter(cat => cat.metadata.name === selectedCategory.value)
     }
 
     const notesWithTimestamp = notesToExport.map(note => ({
@@ -170,7 +173,7 @@ export function useEcho() {
     const exportData: ExportData = {
       version: '1.0',
       exportTime: new Date().toISOString(),
-      categories: allCategories,
+      categories: categoriesToExport,
       notes: notesWithTimestamp
     }
 

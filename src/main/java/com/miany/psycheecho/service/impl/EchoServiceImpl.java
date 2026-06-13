@@ -353,12 +353,14 @@ public class EchoServiceImpl implements EchoService {
                 
                 if (!allNotes.isEmpty()) {
                     Optional<EchoNote> earliest = allNotes.stream()
-                            .min(Comparator.comparing(n -> getTimestamp(n)));
+                            .filter(n -> getNoteTimestamp(n) != null)
+                            .min(Comparator.comparing(n -> getNoteTimestamp(n)));
                     Optional<EchoNote> latest = allNotes.stream()
-                            .max(Comparator.comparing(n -> getTimestamp(n)));
+                            .filter(n -> getNoteTimestamp(n) != null)
+                            .max(Comparator.comparing(n -> getNoteTimestamp(n)));
                     
-                    earliestDate = earliest.map(n -> parseDate(getTimestamp(n), formatter)).orElse(null);
-                    latestDate = latest.map(n -> parseDate(getTimestamp(n), formatter)).orElse(null);
+                    earliestDate = earliest.map(n -> getNoteTimestamp(n).toLocalDate().format(formatter)).orElse(null);
+                    latestDate = latest.map(n -> getNoteTimestamp(n).toLocalDate().format(formatter)).orElse(null);
                 }
                 
                 return StatisticsDTO.builder()

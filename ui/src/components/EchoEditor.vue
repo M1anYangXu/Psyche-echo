@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, watch, onMounted, ref, computed } from 'vue'
+import { shallowRef, watch, onMounted, onUnmounted, ref, computed } from 'vue'
 import {
   ExtensionsKit,
   RichTextEditor,
@@ -242,6 +242,12 @@ onMounted(() => {
   } else {
     getLocationByGPS()
   }
+
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 watch(
@@ -289,6 +295,13 @@ const closeDropdowns = () => {
   showEnvironmentDropdown.value = false
   showWeatherDropdown.value = false
   showWeatherNightDropdown.value = false
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  const wrapper = document.querySelector('.halo-echo-editor-wrapper')
+  if (wrapper && !wrapper.contains(event.target as Node)) {
+    closeDropdowns()
+  }
 }
 </script>
 
