@@ -353,12 +353,12 @@ public class EchoServiceImpl implements EchoService {
                 
                 if (!allNotes.isEmpty()) {
                     Optional<EchoNote> earliest = allNotes.stream()
-                            .min(Comparator.comparing(n -> n.getMetadata().getCreationTimestamp()));
+                            .min(Comparator.comparing(n -> getTimestamp(n)));
                     Optional<EchoNote> latest = allNotes.stream()
-                            .max(Comparator.comparing(n -> n.getMetadata().getCreationTimestamp()));
+                            .max(Comparator.comparing(n -> getTimestamp(n)));
                     
-                    earliestDate = earliest.map(n -> parseDate(n.getMetadata().getCreationTimestamp(), formatter)).orElse(null);
-                    latestDate = latest.map(n -> parseDate(n.getMetadata().getCreationTimestamp(), formatter)).orElse(null);
+                    earliestDate = earliest.map(n -> parseDate(getTimestamp(n), formatter)).orElse(null);
+                    latestDate = latest.map(n -> parseDate(getTimestamp(n), formatter)).orElse(null);
                 }
                 
                 return StatisticsDTO.builder()
@@ -471,12 +471,23 @@ public class EchoServiceImpl implements EchoService {
         return stats;
     }
 
-    private String parseDate(java.time.Instant timestamp, DateTimeFormatter formatter) {
+    private String parseDate(String timestamp, DateTimeFormatter formatter) {
         try {
-            LocalDateTime dateTime = timestamp.atZone(ZoneId.systemDefault()).toLocalDateTime();
+            java.time.Instant instant = java.time.Instant.parse(timestamp);
+            LocalDateTime dateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
             return dateTime.toLocalDate().format(formatter);
         } catch (Exception e) {
             return null;
         }
+    }
+    
+    private String getTimestamp(EchoNote note) {
+        if (note.getStatus() != null && note.getStatus().getCreationTimestamp() != null && !note.getStatus().getCreationTimestamp().isEmpty()) {
+            return note.getStatus().getCreationTimestamp();
+        }
+        if (note.getMetadata() != null && note.getMetadata().getCreationTimestamp() != null) {
+            return note.getMetadata().getCreationTimestamp().toString();
+        }
+        return java.time.Instant.now().toString();
     }
 }
