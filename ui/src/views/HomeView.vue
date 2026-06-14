@@ -42,13 +42,21 @@ const importExportModal = ref(false)
 // Stats Page
 const showStats = ref(true)
 
+// Mobile Sidebar Drawer
+const showSidebar = ref(false)
+
 const toggleStats = () => {
   showStats.value = !showStats.value
+}
+
+const toggleSidebar = () => {
+  showSidebar.value = !showSidebar.value
 }
 
 const handleSelectCategory = (name: string) => {
   showStats.value = false
   selectCategory(name)
+  showSidebar.value = false
 }
 
 // Category Management
@@ -445,6 +453,7 @@ onMounted(() => {
 <template>
   <div class="echo-layout">
     <EchoSidebar
+      :class="{ 'mobile-visible': showSidebar }"
       :categories="categories"
       :selected-category="selectedCategory"
       :show-stats="showStats"
@@ -455,6 +464,17 @@ onMounted(() => {
       @delete-category="deleteCategory"
       @reorder-categories="handleReorderCategories"
     />
+
+    <div v-if="showSidebar" class="sidebar-overlay" @click="toggleSidebar"></div>
+
+    <button class="mobile-category-btn" @click="toggleSidebar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" x2="20" y1="12" y2="12"></line>
+        <line x1="4" x2="20" y1="6" y2="6"></line>
+        <line x1="4" x2="20" y1="18" y2="18"></line>
+      </svg>
+      <span class="category-label">{{ categories.find(c => c.metadata.name === selectedCategory)?.spec.name || '分类' }}</span>
+    </button>
 
     <button class="import-export-btn" @click="importExportModal = true">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -571,6 +591,14 @@ onMounted(() => {
   height: 100vh;
   box-sizing: border-box;
   position: relative;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+    height: auto;
+    min-height: 100vh;
+  }
 }
 
 .import-export-btn {
@@ -655,6 +683,92 @@ onMounted(() => {
   svg {
     width: 18px;
     height: 18px;
+  }
+}
+
+.mobile-category-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 101;
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  .category-label {
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .echo-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    border-radius: 0;
+    border: none;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    padding: 20px;
+    max-height: 100vh;
+    overflow-y: auto;
+
+    &.mobile-visible {
+      transform: translateX(0);
+    }
+  }
+
+  .echo-content {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .import-export-btn {
+    bottom: 24px;
+    right: 24px;
   }
 }
 </style>
