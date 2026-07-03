@@ -37,8 +37,38 @@ const weatherDay = ref('')
 const weatherNight = ref('')
 const showLocationEditor = ref(false)
 const locationInput = ref('')
+const isLoadingLocation = ref(false)
 
 const editor = shallowRef<VueEditor>()
+
+const getBrowserLocation = () => {
+  if (!navigator.geolocation) {
+    alert('您的浏览器不支持地理位置功能')
+    showLocationEditor.value = true
+    return
+  }
+
+  isLoadingLocation.value = true
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords
+      locationInput.value = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      isLoadingLocation.value = false
+      showLocationEditor.value = true
+    },
+    (error) => {
+      console.warn('获取位置失败:', error)
+      isLoadingLocation.value = false
+      showLocationEditor.value = true
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  )
+}
 
 const saveLocation = () => {
   currentCity.value = locationInput.value.trim()
@@ -336,8 +366,11 @@ const handleClickOutside = (event: MouseEvent) => {
           📍 {{ currentCity }}
           <span class="edit-icon">✏️</span>
         </div>
-        <button v-else class="add-location-btn" @click="showLocationEditor = true">
-          📍 添加位置
+        <button v-else-if="isLoadingLocation" class="add-location-btn" disabled>
+          <span class="loading-spinner">⏳</span> 获取位置中...
+        </button>
+        <button v-else class="add-location-btn" @click="getBrowserLocation">
+          📍 获取位置
         </button>
       </div>
       <div class="footer-right">
@@ -354,11 +387,11 @@ const handleClickOutside = (event: MouseEvent) => {
     <div v-if="showLocationEditor" class="location-modal-overlay" @click.self="showLocationEditor = false">
       <div class="location-modal" @click.stop>
         <h3>编辑位置</h3>
-        <p class="modal-hint">请输入城市或位置名称</p>
+        <p class="modal-hint">可以直接保存坐标，或修改为城市名称</p>
         <input
           v-model="locationInput"
           class="location-input"
-          placeholder="例如：北京市、上海市..."
+          placeholder="例如：39.9042, 116.4074 或 北京市"
           @keyup.enter="saveLocation"
         />
         <div class="modal-buttons">
