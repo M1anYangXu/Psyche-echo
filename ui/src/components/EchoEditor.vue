@@ -41,7 +41,7 @@ const isLoadingLocation = ref(false)
 
 const editor = shallowRef<VueEditor>()
 
-const getBrowserLocation = () => {
+const getCurrentLocation = async () => {
   if (!navigator.geolocation) {
     alert('您的浏览器不支持地理位置功能')
     showLocationEditor.value = true
@@ -50,24 +50,47 @@ const getBrowserLocation = () => {
 
   isLoadingLocation.value = true
 
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const { latitude, longitude } = position.coords
-      locationInput.value = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-      isLoadingLocation.value = false
-      showLocationEditor.value = true
-    },
-    (error) => {
-      console.warn('获取位置失败:', error)
-      isLoadingLocation.value = false
-      showLocationEditor.value = true
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      })
+    })
+
+    const { latitude, longitude } = position.coords
+    await getCityFromCoords(latitude, longitude)
+  } catch (error) {
+    console.warn('获取位置失败:', error)
+    showLocationEditor.value = true
+  } finally {
+    isLoadingLocation.value = false
+  }
+}
+
+const getCityFromCoords = async (lat: number, lng: number) => {
+  try {
+    const response = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`
+    )
+    const data = await response.json()
+
+    if (data.city) {
+      locationInput.value = data.city
+    } else if (data.principalSubdivision) {
+      locationInput.value = data.principalSubdivision
+    } else if (data.locality) {
+      locationInput.value = data.locality
+    } else {
+      locationInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
     }
-  )
+    showLocationEditor.value = true
+  } catch (error) {
+    console.warn('逆地理编码失败:', error)
+    locationInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    showLocationEditor.value = true
+  }
 }
 
 const saveLocation = () => {
@@ -369,7 +392,7 @@ const handleClickOutside = (event: MouseEvent) => {
         <button v-else-if="isLoadingLocation" class="add-location-btn" disabled>
           <span class="loading-spinner">⏳</span> 获取位置中...
         </button>
-        <button v-else class="add-location-btn" @click="getBrowserLocation">
+        <button v-else class="add-location-btn" @click="getCurrentLocation">
           📍 获取位置
         </button>
       </div>
@@ -387,7 +410,7 @@ const handleClickOutside = (event: MouseEvent) => {
     <div v-if="showLocationEditor" class="location-modal-overlay" @click.self="showLocationEditor = false">
       <div class="location-modal" @click.stop>
         <h3>编辑位置</h3>
-        <p class="modal-hint">可以直接保存坐标，或修改为城市名称</p>
+        <p class="modal-hint">已自动获取城市名称，也可手动修改</p>
         <input
           v-model="locationInput"
           class="location-input"
