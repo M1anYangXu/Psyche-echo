@@ -16,10 +16,57 @@ spec:
   repo: https://gitee.com/Little-Mianyang/psyche-echo
   issues: https://gitee.com/Little-Mianyang/psyche-echo/issues
   displayName: "心灵回响"
-  description: "记录日记、记录心情、想法和生活点滴"
+  description: "记录日记、记录心情、想法和生活点滴的个人笔记插件"
   license:
     - name: "GPL-3.0"
-      url: "https://gitee.com/Little-Mianyang/psyche-echo/blob/main/LICENSE"
+      url: "https://www.gnu.org/licenses/gpl-3.0.html"
+  settingName: ""
+  configMapName: ""
+  version: "1.0.0"
+  # 隐私说明
+  privacyPolicy: |
+    ## 隐私政策
+    
+    本插件尊重并保护用户的个人隐私权益。
+    
+    ### 数据收集
+    - 本插件不会收集或传输任何用户的个人身份信息
+    - 所有笔记数据仅存储在用户的 Halo 站点本地
+    - 不使用任何第三方分析或追踪服务
+    - 不获取用户的地理位置信息
+    
+    ### 数据存储
+    - 所有笔记和分类数据通过 Halo Extension 机制存储在本地数据库
+    - 用户可以随时导出或删除自己的数据
+    
+    ### 第三方服务
+    - 本插件不调用任何第三方 API 服务
+  # 使用说明
+  usage: |
+    ## 使用说明
+    
+    ### 功能特性
+    - 📝 创建和编辑个人笔记
+    - 📁 自定义分类管理
+    - 🖼️ 支持图片和媒体文件
+    - 📊 访问统计功能
+    - 🎨 自定义分类图标
+    - 😊 表情支持
+    
+    ### 快速开始
+    1. 安装插件后，在 Halo 管理后台左侧菜单找到「心灵回响」
+    2. 点击进入插件主界面
+    3. 点击「新建」按钮创建笔记
+    4. 使用分类管理功能组织笔记
+    
+    ### 分类管理
+    - 点击侧边栏的「+」按钮创建新分类
+    - 可以为每个分类设置自定义图标
+    - 点击分类可以筛选该分类下的笔记
+    
+    ### 数据导入导出
+    - 支持导出笔记数据为 JSON 格式
+    - 支持从 JSON 文件导入笔记数据
   extensionPoints:
     console:
       uiPlugins:

@@ -35,81 +35,17 @@ const emit = defineEmits<{
 const currentCity = ref('')
 const weatherDay = ref('')
 const weatherNight = ref('')
-
-const fetchCityFromCoords = async (lat: number, lng: number) => {
-  try {
-    const response = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=1560db1cdb6f71f169d02454758d2e40&location=${lng},${lat}`)
-    const data = await response.json()
-    if (data.status === '1' && data.regeocode) {
-      const addressComponent = data.regeocode.addressComponent
-      if (addressComponent.province && addressComponent.city && addressComponent.district) {
-        currentCity.value = `${addressComponent.province}：${addressComponent.city}：${addressComponent.district}`
-      } else if (addressComponent.province && addressComponent.city) {
-        currentCity.value = `${addressComponent.province}：${addressComponent.city}`
-      } else if (addressComponent.city) {
-        currentCity.value = addressComponent.city
-      } else if (addressComponent.province) {
-        currentCity.value = addressComponent.province
-      }
-      emit('update:location', currentCity.value)
-      return true
-    }
-  } catch (e) {
-    console.error('逆地理编码失败:', e)
-  }
-  return false
-}
-
-const fetchCityFromIP = async () => {
-  try {
-    const response = await fetch('https://restapi.amap.com/v3/ip?key=1560db1cdb6f71f169d02454758d2e40')
-    const data = await response.json()
-    if (data.status === '1') {
-      if (data.city && data.province) {
-        currentCity.value = `${data.province}：${data.city}`
-      } else if (data.city) {
-        currentCity.value = data.city
-      } else if (data.province) {
-        currentCity.value = data.province
-      } else {
-        currentCity.value = '未知城市'
-      }
-      emit('update:location', currentCity.value)
-    } else {
-      currentCity.value = '未知城市'
-    }
-  } catch (error) {
-    console.error('获取城市失败:', error)
-    currentCity.value = '未知城市'
-  }
-}
-
-const getLocationByGPS = () => {
-  if (!navigator.geolocation) {
-    fetchCityFromIP()
-    return
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const { latitude, longitude } = position.coords
-      const success = await fetchCityFromCoords(latitude, longitude)
-      if (!success) {
-        fetchCityFromIP()
-      }
-    },
-    () => {
-      fetchCityFromIP()
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 300000
-    }
-  )
-}
+const showLocationEditor = ref(false)
+const locationInput = ref('')
 
 const editor = shallowRef<VueEditor>()
+
+const saveLocation = () => {
+  currentCity.value = locationInput.value.trim()
+  emit('update:location', currentCity.value)
+  showLocationEditor.value = false
+}
+
 const localMedias = ref<Array<{ url: string; type: string; cover?: string; displayName?: string }>>([])
 const emojiSelectorModal = ref(false)
 const showMoodDropdown = ref(false)
@@ -124,17 +60,11 @@ const weatherOptions = [
   { value: '小雨', label: '🌧️ 小雨' },
   { value: '中雨', label: '🌧️ 中雨' },
   { value: '大雨', label: '⛈️ 大雨' },
-  { value: '暴雨', label: '⛈️ 暴雨' },
   { value: '雷阵雨', label: '⛈️ 雷阵雨' },
   { value: '小雪', label: '❄️ 小雪' },
   { value: '中雪', label: '❄️ 中雪' },
   { value: '大雪', label: '🌨️ 大雪' },
-  { value: '暴雪', label: '🌨️ 暴雪' },
   { value: '雨夹雪', label: '🌨️ 雨夹雪' },
-  { value: '雾', label: '🌫️ 雾' },
-  { value: '霾', label: '🌫️ 霾' },
-  { value: '风', label: '🌬️ 风' },
-  { value: '大风', label: '🌬️ 大风' },
 ]
 
 const moodOptions = [
@@ -236,12 +166,7 @@ onMounted(() => {
 
   weatherDay.value = props.weatherDay || ''
   weatherNight.value = props.weatherNight || ''
-
-  if (props.editing) {
-    currentCity.value = props.location || ''
-  } else {
-    getLocationByGPS()
-  }
+  currentCity.value = props.location || ''
 
   document.addEventListener('click', handleClickOutside)
 })
@@ -407,10 +332,13 @@ const handleClickOutside = (event: MouseEvent) => {
         </div>
       </div>
       <div class="footer-center">
-        <span v-if="currentCity" class="location-badge">
+        <div v-if="currentCity" class="location-badge" @click="showLocationEditor = true">
           📍 {{ currentCity }}
-          <button class="refresh-location-btn" @click.stop="getLocationByGPS" title="重新定位">🔄</button>
-        </span>
+          <span class="edit-icon">✏️</span>
+        </div>
+        <button v-else class="add-location-btn" @click="showLocationEditor = true">
+          📍 添加位置
+        </button>
       </div>
       <div class="footer-right">
         <slot name="footer-right"></slot>
@@ -421,6 +349,24 @@ const handleClickOutside = (event: MouseEvent) => {
       v-model:visible="emojiSelectorModal"
       @select="onEmojiSelect"
     />
+
+    <!-- 位置编辑模态框 -->
+    <div v-if="showLocationEditor" class="location-modal-overlay" @click.self="showLocationEditor = false">
+      <div class="location-modal" @click.stop>
+        <h3>编辑位置</h3>
+        <p class="modal-hint">请输入城市或位置名称</p>
+        <input
+          v-model="locationInput"
+          class="location-input"
+          placeholder="例如：北京市、上海市..."
+          @keyup.enter="saveLocation"
+        />
+        <div class="modal-buttons">
+          <button class="cancel-btn" @click="showLocationEditor = false">取消</button>
+          <button class="save-btn" @click="saveLocation">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -549,35 +495,6 @@ const handleClickOutside = (event: MouseEvent) => {
   justify-content: center;
 }
 
-.location-badge {
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-  font-size: 14px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.refresh-location-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0;
-  transition: transform 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    transform: rotate(180deg);
-  }
-}
-
 .footer-left {
   display: flex;
   gap: 0.5rem;
@@ -701,6 +618,129 @@ const handleClickOutside = (event: MouseEvent) => {
   &.active {
     background-color: #dbeafe;
     color: #1d4ed8;
+  }
+}
+
+.location-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%);
+  }
+}
+
+.edit-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.add-location-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: none;
+  border: 1px dashed #9ca3af;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+}
+
+.location-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.location-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.location-modal h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.modal-hint {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.location-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn, .save-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+.save-btn {
+  background: #3b82f6;
+  border: none;
+  color: white;
+
+  &:hover {
+    background: #2563eb;
   }
 }
 </style>
